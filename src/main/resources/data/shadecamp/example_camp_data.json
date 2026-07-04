@@ -1,0 +1,19 @@
+{
+  "camps": [
+    {
+      "name": "example_camp",
+      "position": [100, 64, 100],
+      "triggerRange": 12,
+      "mobConfig": {
+        "minecraft:zombie": 2,
+        "minecraft:skeleton": 1
+      },
+      "lootTable": "minecraft:chests/simple_dungeon",
+      "chestPosition": [100, 64, 100],
+      "status": "IDLE",
+      "refreshTime": 0,
+      "safeSpawnPoints": [],
+      "lastClearedTime": 0
+    }
+  ]
+}
