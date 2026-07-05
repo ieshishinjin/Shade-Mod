@@ -15,9 +15,7 @@ import java.util.Set;
 
 /**
  * 基于种子的安全位置分析算法
- * <p>
- * 模拟 Minecraft 寻找安全生成位置的算法，通过世界种子和坐标预判安全性，
- * 无需实际加载区块或传送实体。
+ * 模拟 Minecraft 寻找安全生成位置的算法，通过世界种子和坐标预判安全性。
  */
 public class CampSpawnValidator {
 
@@ -54,7 +52,7 @@ public class CampSpawnValidator {
                     int surfaceY = getSurfaceY(world, candidate.getX(), candidate.getZ());
                     if (surfaceY == -1) continue;
 
-                    candidate = new BlockPos(candidate.getX(), surfaceY, candidate.getZ());
+                    candidate = new BlockPos(candidate.getX(), surfaceY + 1, candidate.getZ());
 
                     if (isPositionSafe(world, candidate)) {
                         safePoints.add(candidate);
@@ -69,9 +67,9 @@ public class CampSpawnValidator {
         if (safePoints.isEmpty()) {
             int surfaceY = getSurfaceY(world, center.getX(), center.getZ());
             if (surfaceY != -1) {
-                BlockPos centerGround = new BlockPos(center.getX(), surfaceY, center.getZ());
-                if (isPositionSafe(world, centerGround)) {
-                    safePoints.add(centerGround);
+                BlockPos centerStand = new BlockPos(center.getX(), surfaceY + 1, center.getZ());
+                if (isPositionSafe(world, centerStand)) {
+                    safePoints.add(centerStand);
                 }
             }
         }

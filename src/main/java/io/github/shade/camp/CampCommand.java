@@ -186,14 +186,17 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         List<Camp> camps = manager.getAllCamps();
+        int pendingCount = manager.getPendingCampCount();
 
-        if (camps.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7没有已创建的据点"), true);
+        if (camps.isEmpty() && pendingCount == 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal("§7没有已创建的据点"), false);
             return 0;
         }
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§6=== 据点列表 (§e" + camps.size() + "§6 个) ==="), false);
+                "§6=== 据点列表 (§e" + camps.size() + "§6 已激活" +
+                        (pendingCount > 0 ? ", §7" + pendingCount + " 待生成§6" : "") +
+                        " ==="), false);
 
         for (Camp camp : camps) {
             BlockPos pos = camp.getBlockPos();
@@ -213,7 +216,14 @@ public class CampCommand {
             )), false);
         }
 
-        return camps.size();
+        // 显示待生成的候选据点
+        if (pendingCount > 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "  §7... 还有 " + pendingCount + " 个候选据点等待区块加载后生成"
+            ), false);
+        }
+
+        return camps.size() + pendingCount;
     }
 
     private static int executeAddMob(CommandContext<CommandSourceStack> ctx) {

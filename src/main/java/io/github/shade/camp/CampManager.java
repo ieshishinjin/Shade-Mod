@@ -45,6 +45,12 @@ public class CampManager {
     private final Path saveFile;
     private final Map<String, Camp> camps = new LinkedHashMap<>();
 
+    /** 待创建的候选据点（自动生成用，存 BlockPos） */
+    private final List<BlockPos> pendingCamps = new ArrayList<>();
+
+    /** 是否已完成本种子的自动生成 */
+    private boolean seedGenerated = false;
+
     private int tickCounter = 0;
 
     private CampManager(ServerLevel world) {
@@ -115,6 +121,12 @@ public class CampManager {
             try (Writer writer = Files.newBufferedWriter(saveFile)) {
                 CampDataWrapper wrapper = new CampDataWrapper();
                 wrapper.camps = new ArrayList<>(camps.values());
+                // 保存已生成的种子标记
+                if (seedGenerated && !wrapper.generatedSeeds.contains(
+                        CampWorldGenerator.GENERATION_FLAG_PREFIX + world.getSeed())) {
+                    wrapper.generatedSeeds.add(
+                            CampWorldGenerator.GENERATION_FLAG_PREFIX + world.getSeed());
+                }
                 GSON.toJson(wrapper, writer);
             }
         } catch (IOException e) {
@@ -184,6 +196,13 @@ public class CampManager {
      */
     public int getCampCount() {
         return camps.size();
+    }
+
+    /**
+     * 待创建的候选据点数
+     */
+    public int getPendingCampCount() {
+        return pendingCamps.size();
     }
 
     /**
@@ -266,6 +285,75 @@ public class CampManager {
         );
     }
 
+    /**
+     * 直接添加一个据点（用于自动生成器）
+     */
+    public void addCamp(Camp camp) {
+        if (camp == null || camp.getName() == null) return;
+        if (camps.containsKey(camp.getName())) return;
+        camps.put(camp.getName(), camp);
+    }
+
+    /**
+     * 添加候选据点列表（用于调试）
+     */
+    public void addPendingCamps(List<BlockPos> candidates) {
+        pendingCamps.addAll(candidates);
+    }
+
+    /**
+     * 触发自动据点生成
+     * <p>
+     * 基于世界种子计算所有候选位置，之后区块加载时逐步完成创建。
+     */
+    public boolean triggerAutoGeneration() {
+        if (seedGenerated) return false;
+
+        long seed = world.getSeed();
+        String flagKey = CampWorldGenerator.GENERATION_FLAG_PREFIX + seed;
+
+        // 从数据包装器检查是否已生成
+        if (hasGenerationFlag(flagKey)) {
+            seedGenerated = true;
+            ShadeMod.LOGGER.info("[shadecamp] 种子 {} 的据点已生成过，跳过自动生成", seed);
+            return false;
+        }
+
+        ShadeMod.LOGGER.info("[shadecamp] 开始自动据点生成（种子: {}）...", seed);
+
+        // 计算候选位置（纯种子计算，不加载区块）
+        List<BlockPos> candidates = CampWorldGenerator.generateCandidates(world);
+        pendingCamps.addAll(candidates);
+
+        // 标记为已生成
+        seedGenerated = true;
+        setGenerationFlag(flagKey);
+        save();
+
+        ShadeMod.LOGGER.info("[shadecamp] 自动生成完成，{} 个候选待区块加载后创建", pendingCamps.size());
+        return true;
+    }
+
+    /**
+     * 快速检查种子是否已生成（无需反序列化完整数据）
+     */
+    private boolean hasGenerationFlag(String flagKey) {
+        try {
+            if (!Files.exists(saveFile)) return false;
+            try (Reader reader = Files.newBufferedReader(saveFile)) {
+                CampDataWrapper wrapper = GSON.fromJson(reader, CampDataWrapper.class);
+                return wrapper != null && wrapper.generatedSeeds != null
+                        && wrapper.generatedSeeds.contains(flagKey);
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void setGenerationFlag(String flagKey) {
+        // 由 save() 方法在保存时统一写入
+    }
+
     // ==================== 核心逻辑 ====================
 
     /**
@@ -274,9 +362,12 @@ public class CampManager {
     public void tick() {
         tickCounter++;
 
+        // 1. 处理待创建的候选据点（区块加载后自动完成）
+        processPendingCamps();
+
+        // 2. 更新已激活据点的状态
         long gameTime = world.getGameTime();
         List<Camp> processed = new ArrayList<>(camps.values());
-
         for (Camp camp : processed) {
             switch (camp.getStatus()) {
                 case IDLE -> tickIdle(camp, gameTime);
@@ -289,6 +380,47 @@ public class CampManager {
         if (tickCounter % 100 == 0) {
             save();
         }
+    }
+
+    /**
+     * 处理待创建的候选据点
+     * <p>
+     * 当候选据点所在区块加载后，执行完整的安全验证并创建据点。
+     */
+    private void processPendingCamps() {
+        if (pendingCamps.isEmpty()) return;
+
+        Iterator<BlockPos> it = pendingCamps.iterator();
+        int created = 0;
+        while (it.hasNext()) {
+            BlockPos pending = it.next();
+
+            // 区块必须已加载
+            if (!world.isLoaded(pending)) continue;
+
+            // 尝试完成创建（finalizeCamp 内部做完整检查）
+            Camp camp = CampWorldGenerator.finalizeCamp(world, pending, this);
+            if (camp != null) created++;
+
+            it.remove(); // 无论成功失败，只试一次
+        }
+
+        if (created > 0) {
+            ShadeMod.LOGGER.info("[shadecamp] 本轮自动创建 {} 个据点", created);
+            save();
+        }
+    }
+
+    /**
+     * 判断候选位置是否在任意玩家的附近
+     */
+    private boolean isNearAnyPlayer(BlockPos pos, int radius) {
+        for (ServerPlayer player : world.players()) {
+            if (player.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) < radius * radius) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -582,7 +714,9 @@ public class CampManager {
      * Gson 包装器
      */
     private static class CampDataWrapper {
-        List<Camp> camps;
+        List<Camp> camps = new ArrayList<>();
+        /** 已完成自动生成的种子列表 */
+        List<String> generatedSeeds = new ArrayList<>();
     }
 
     /**

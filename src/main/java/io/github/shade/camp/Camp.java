@@ -8,10 +8,7 @@ import net.minecraft.world.BossEvent;
 
 import java.util.*;
 
-/**
- * 据点数据模型
- * 参考《原神》大世界怪物营地机制
- */
+
 public class Camp {
 
     /** 据点功能的独立命名空间 */
