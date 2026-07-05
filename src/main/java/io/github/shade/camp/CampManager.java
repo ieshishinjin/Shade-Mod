@@ -48,6 +48,12 @@ public class CampManager {
     /** 待创建的候选据点（自动生成用，存 BlockPos） */
     private final List<BlockPos> pendingCamps = new ArrayList<>();
 
+    public boolean isCampMob(java.util.UUID uuid) {
+        for (Camp camp : camps.values()) {
+            if (camp.getActiveMobIds().contains(uuid)) return true;
+        }
+        return false;
+    }
     /** 是否已完成本种子的自动生成 */
     private boolean seedGenerated = false;
 
