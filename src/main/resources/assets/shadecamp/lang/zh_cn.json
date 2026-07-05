@@ -1,0 +1,68 @@
+{
+  "shadecamp.camp.list.none": "§7没有已创建的据点",
+  "shadecamp.camp.list.header": "§6=== 据点列表 (§e%d§6 已激活§7, %d 待生成§6) ===",
+  "shadecamp.camp.list.header.simple": "§6=== 据点列表 (§e%d§6 个) ===",
+  "shadecamp.camp.list.entry": "  %s[%s] §f%s §7@ [%d, %d, %d] §7| 怪物: %s§7| 范围: %d",
+  "shadecamp.camp.list.pending": "  §7... 还有 %d 个候选据点加载后可生成",
+
+  "shadecamp.camp.create.success": "§a据点 '%s' 已创建！",
+  "shadecamp.camp.create.exists": "§c据点 '%s' 已存在！",
+  "shadecamp.camp.create.failed": "§c创建据点失败",
+  "shadecamp.camp.create.info": "  §7生物群系: §f%s  §7安全点: §f%d 个  §7怪物: %s",
+  "shadecamp.camp.create.nowarning": "  §e⚠ 未找到安全生成点",
+
+  "shadecamp.camp.delete.success": "§c据点 '%s' 已删除",
+  "shadecamp.camp.delete.notfound": "§c据点 '%s' 不存在！",
+  "shadecamp.camp.delete.noperm": "§c你没有权限删除据点，需要管理员权限",
+
+  "shadecamp.camp.addmob.success": "§a已添加 %s ×%d 到据点 '%s'",
+  "shadecamp.camp.addmob.invalid": "§c未知实体类型: %s",
+
+  "shadecamp.camp.removemob.success": "§a已从据点 '%s' 移除 %s ×%d",
+  "shadecamp.camp.removemob.notfound": "§c据点中未找到 %s",
+
+  "shadecamp.camp.setrange.success": "§a据点 '%s' 触发范围已设置为 %d 格",
+  "shadecamp.camp.setloot.success": "§a据点 '%s' 战利品表已设置为 %s",
+
+  "shadecamp.camp.reset.success": "§a据点 '%s' 已重置（怪物和宝箱已刷新）",
+  "shadecamp.camp.refresh.success": "§a据点 '%s' 安全生成点已刷新，当前 %d 个安全位置",
+
+  "shadecamp.camp.clearall.success": "§c已清除全部 %d 个据点",
+  "shadecamp.camp.clearall.noperm": "§c你没有权限清除全部据点，需要管理员权限",
+
+  "shadecamp.camp.check.header": "§6=== 据点安全检查: %s ===",
+  "shadecamp.camp.check.pos": "  位置: §f[%d, %d, %d]",
+  "shadecamp.camp.check.safe": "  中心安全: §a✔",
+  "shadecamp.camp.check.unsafe": "  中心安全: §c✘",
+  "shadecamp.camp.check.spawns": "  安全生成点: §a%d 个",
+  "shadecamp.camp.check.spawns.none": "  安全生成点: §c%d 个",
+  "shadecamp.camp.check.status": "  状态: §f%s",
+  "shadecamp.camp.check.mobs": "  怪物总数: §f%d 只",
+  "shadecamp.camp.check.result.ok": "  评估: §a✔ 位置安全",
+  "shadecamp.camp.check.result.bad": "  评估: §c✘ 位置不安全",
+
+  "shadecamp.bossbar.title": "⚔ §e%s §r§7[§a%d§7/§c%d§7]",
+
+  "shadecamp.camp.prefix.0": "废弃",
+  "shadecamp.camp.prefix.1": "破旧",
+  "shadecamp.camp.prefix.2": "荒芜",
+  "shadecamp.camp.prefix.3": "隐秘",
+  "shadecamp.camp.prefix.4": "古老",
+  "shadecamp.camp.prefix.5": "幽暗",
+  "shadecamp.camp.suffix": "营地",
+
+  "shadecamp.entity.zombie": "僵尸",
+  "shadecamp.entity.skeleton": "骷髅",
+  "shadecamp.entity.spider": "蜘蛛",
+  "shadecamp.entity.creeper": "苦力怕",
+  "shadecamp.entity.husk": "尸壳",
+  "shadecamp.entity.stray": "流浪者",
+  "shadecamp.entity.slime": "史莱姆",
+  "shadecamp.entity.witch": "女巫",
+  "shadecamp.entity.phantom": "幻翼",
+  "shadecamp.entity.enderman": "末影人",
+
+  "shadecamp.status.IDLE": "空闲",
+  "shadecamp.status.FIGHTING": "战斗中",
+  "shadecamp.status.CLEARED": "已清空"
+}

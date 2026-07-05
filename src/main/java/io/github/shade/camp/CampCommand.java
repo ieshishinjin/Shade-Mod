@@ -16,7 +16,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,39 +27,25 @@ import static net.minecraft.commands.Commands.literal;
 import static net.minecraft.commands.Commands.argument;
 
 /**
- * 据点命令系统
- * <p>
- * 提供 "/camp" 命令的所有子命令，管理员可用。
+ * 据点命令系统 — 全部文字使用 translatable 实现 i18n
  */
 public class CampCommand {
-
-    private static final int ADMIN_LEVEL = 2; // 需要管理员权限
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 literal("camp")
-                        // 不设全局权限限制，基础命令所有人都能用
-                        // 危险命令（delete/clearall）内部再检查权限
-
-                        // ---- create ----
                         .then(literal("create")
                                 .then(argument("name", word())
                                         .executes(CampCommand::executeCreate))
                         )
-
-                        // ---- delete ----
                         .then(literal("delete")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .executes(CampCommand::executeDelete))
                         )
-
-                        // ---- list ----
                         .then(literal("list")
                                 .executes(CampCommand::executeList)
                         )
-
-                        // ---- addmob ----
                         .then(literal("addmob")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
@@ -69,8 +54,6 @@ public class CampCommand {
                                                 .then(argument("count", IntegerArgumentType.integer(1, 10))
                                                         .executes(CampCommand::executeAddMob))))
                         )
-
-                        // ---- removemob ----
                         .then(literal("removemob")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
@@ -78,45 +61,33 @@ public class CampCommand {
                                                 .suggests(CampCommand::suggestCampMobs)
                                                 .executes(CampCommand::executeRemoveMob)))
                         )
-
-                        // ---- setrange ----
                         .then(literal("setrange")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .then(argument("range", IntegerArgumentType.integer(5, 50))
                                                 .executes(CampCommand::executeSetRange)))
                         )
-
-                        // ---- setloot ----
                         .then(literal("setloot")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .then(argument("loottable", ResourceLocationArgument.id())
                                                 .executes(CampCommand::executeSetLoot)))
                         )
-
-                        // ---- reset ----
                         .then(literal("reset")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .executes(CampCommand::executeReset))
                         )
-
-                        // ---- refresh ----
                         .then(literal("refresh")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .executes(CampCommand::executeRefresh))
                         )
-
-                        // ---- check ----
                         .then(literal("check")
                                 .then(argument("name", word())
                                         .suggests(CampCommand::suggestCamps)
                                         .executes(CampCommand::executeCheck))
                         )
-
-                        // ---- clearall ----
                         .then(literal("clearall")
                                 .executes(CampCommand::executeClearAll))
         );
@@ -132,53 +103,46 @@ public class CampCommand {
 
         Camp existing = manager.getCamp(name);
         if (existing != null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 已存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.create.exists", name));
             return 0;
         }
 
         Camp camp = manager.createCamp(name, player.blockPosition());
         if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("创建据点失败！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.create.failed"));
             return 0;
         }
 
         int spawnCount = camp.getSafeSpawnPoints() != null ? camp.getSafeSpawnPoints().size() : 0;
         String biomeName = CampRandomizer.getBiomeDisplayName(world.getBiome(player.blockPosition()));
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§a据点 '" + name + "' 已创建！"
-                ), true);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                        "  §7生物群系: §f" + biomeName
-                        + "  §7安全生成点: §f" + spawnCount + " 个"
-                        + "  §7怪物配置: §f" + formatMobConfig(camp.getMobConfig())
-                ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.create.success", name), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.create.info", biomeName, spawnCount, formatMobConfig(camp.getMobConfig())), true);
 
         if (spawnCount == 0) {
             ctx.getSource().sendSuccess(() ->
-                    Component.literal("  §e⚠ 未找到安全生成点，建议使用 /camp check 检查位置"), true);
+                    Component.translatable("shadecamp.camp.create.nowarning"), true);
         }
-
         return 1;
     }
 
     private static int executeDelete(CommandContext<CommandSourceStack> ctx) {
         if (!ctx.getSource().hasPermission(2)) {
-            ctx.getSource().sendFailure(Component.literal("§c你没有权限删除据点，需要管理员权限"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.noperm"));
             return 0;
         }
         String name = getString(ctx, "name");
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
 
-        Camp camp = manager.getCamp(name);
-        if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+        if (manager.getCamp(name) == null) {
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
-
         manager.deleteCamp(name);
-        ctx.getSource().sendSuccess(() -> Component.literal("§c据点 '" + name + "' 已删除"), true);
+        ctx.getSource().sendSuccess(() -> Component.translatable("shadecamp.camp.delete.success", name), true);
         return 1;
     }
 
@@ -189,40 +153,41 @@ public class CampCommand {
         int pendingCount = manager.getPendingCampCount();
 
         if (camps.isEmpty() && pendingCount == 0) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7没有已创建的据点"), false);
+            ctx.getSource().sendSuccess(() -> Component.translatable("shadecamp.camp.list.none"), false);
             return 0;
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§6=== 据点列表 (§e" + camps.size() + "§6 已激活" +
-                        (pendingCount > 0 ? ", §7" + pendingCount + " 待生成§6" : "") +
-                        " ==="), false);
+        boolean hasPending = pendingCount > 0;
+        ctx.getSource().sendSuccess(() ->
+                hasPending
+                        ? Component.translatable("shadecamp.camp.list.header", camps.size(), pendingCount)
+                        : Component.translatable("shadecamp.camp.list.header.simple", camps.size()),
+                false);
 
         for (Camp camp : camps) {
             BlockPos pos = camp.getBlockPos();
+            String statusKey = "shadecamp.status." + camp.getStatus().name();
             String statusColor = switch (camp.getStatus()) {
-                case IDLE -> "§a";      // 绿色
-                case FIGHTING -> "§c";  // 红色
-                case CLEARED -> "§7";   // 灰色
+                case IDLE -> "§a";
+                case FIGHTING -> "§c";
+                case CLEARED -> "§7";
             };
-
-            ctx.getSource().sendSuccess(() -> Component.literal(String.format(
-                    "  %s[%s] §f%s §7@ [%d, %d, %d] §7| 怪物: %s§7| 范围: %d",
-                    statusColor, camp.getStatus().name(),
-                    camp.getName(),
-                    pos.getX(), pos.getY(), pos.getZ(),
-                    formatMobConfig(camp.getMobConfig()),
-                    camp.getTriggerRange()
-            )), false);
+            String finalStatusColor = statusColor;
+            ctx.getSource().sendSuccess(() ->
+                    Component.translatable("shadecamp.camp.list.entry",
+                            finalStatusColor,
+                            Component.translatable(statusKey).getString(),
+                            camp.getName(),
+                            pos.getX(), pos.getY(), pos.getZ(),
+                            formatMobConfig(camp.getMobConfig()),
+                            camp.getTriggerRange()
+                    ), false);
         }
 
-        // 显示待生成的候选据点
-        if (pendingCount > 0) {
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "  §7... 还有 " + pendingCount + " 个候选据点等待区块加载后生成"
-            ), false);
+        if (hasPending) {
+            ctx.getSource().sendSuccess(() ->
+                    Component.translatable("shadecamp.camp.list.pending", pendingCount), false);
         }
-
         return camps.size() + pendingCount;
     }
 
@@ -234,25 +199,21 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         Camp camp = manager.getCamp(name);
-
         if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
 
-        // 验证实体类型是否存在
         String fullId = entity.contains(":") ? entity : "minecraft:" + entity;
         if (!BuiltInRegistries.ENTITY_TYPE.containsKey(ResourceLocation.parse(fullId))) {
-            ctx.getSource().sendFailure(Component.literal("未知实体类型: " + fullId));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.addmob.invalid", fullId));
             return 0;
         }
 
         camp.getMobConfig().merge(fullId, count, Integer::sum);
         manager.save();
-
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a已添加 " + fullId + " ×" + count + " 到据点 '" + name + "'"
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.addmob.success", fullId, count, name), true);
         return 1;
     }
 
@@ -263,23 +224,20 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         Camp camp = manager.getCamp(name);
-
         if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
 
         String fullId = entity.contains(":") ? entity : "minecraft:" + entity;
         Integer removed = camp.getMobConfig().remove(fullId);
         if (removed == null) {
-            ctx.getSource().sendFailure(Component.literal("据点中未找到 " + fullId));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.removemob.notfound", fullId));
             return 0;
         }
-
         manager.save();
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a已从据点 '" + name + "' 移除 " + fullId + " ×" + removed
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.removemob.success", name, fullId, removed), true);
         return 1;
     }
 
@@ -290,18 +248,14 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         Camp camp = manager.getCamp(name);
-
         if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
-
         camp.setTriggerRange(range);
         manager.save();
-
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a据点 '" + name + "' 触发范围已设置为 " + range + " 格"
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.setrange.success", name, range), true);
         return 1;
     }
 
@@ -312,104 +266,90 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         Camp camp = manager.getCamp(name);
-
         if (camp == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
-
         camp.setLootTable(lootTable.toString());
         manager.save();
-
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a据点 '" + name + "' 战利品表已设置为 " + lootTable
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.setloot.success", name, lootTable), true);
         return 1;
     }
 
     private static int executeReset(CommandContext<CommandSourceStack> ctx) {
         String name = getString(ctx, "name");
-
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
-
         if (manager.getCamp(name) == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
-
         manager.resetCamp(name);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a据点 '" + name + "' 已重置（怪物和宝箱已刷新）"
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.reset.success", name), true);
         return 1;
     }
 
     private static int executeRefresh(CommandContext<CommandSourceStack> ctx) {
         String name = getString(ctx, "name");
-
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
-
         if (manager.getCamp(name) == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
-
         int count = manager.refreshCache(name);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a据点 '" + name + "' 安全生成点已刷新，当前 " + count + " 个安全位置"
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.refresh.success", name, count), true);
         return 1;
     }
 
     private static int executeCheck(CommandContext<CommandSourceStack> ctx) {
         String name = getString(ctx, "name");
-
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         CampManager.CheckResult result = manager.checkCamp(name);
 
         if (result == null) {
-            ctx.getSource().sendFailure(Component.literal("据点 '" + name + "' 不存在！"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.delete.notfound", name));
             return 0;
         }
 
         boolean safe = result.isSafe();
-        String color = safe ? "§a" : "§c";
-
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§6=== 据点安全检查: " + result.name() + " ==="), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  位置: §f[" + result.position().toShortString() + "]"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  中心安全: " + (result.centerSafe() ? "§a✔" : "§c✘")), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  安全生成点: " + color + result.safeSpawnCount() + " 个"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  状态: §f" + result.status().name()), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  怪物总数: §f" + result.totalMobs() + " 只"), false);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "  评估: " + color + (safe ? "✔ 位置安全" : "✘ 位置不安全，建议使用 /camp refresh 重新计算")), false);
-
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.check.header", result.name()), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.check.pos",
+                        result.position().getX(), result.position().getY(), result.position().getZ()), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable(result.centerSafe()
+                        ? "shadecamp.camp.check.safe" : "shadecamp.camp.check.unsafe"), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable(result.safeSpawnCount() > 0
+                        ? "shadecamp.camp.check.spawns" : "shadecamp.camp.check.spawns.none",
+                        result.safeSpawnCount()), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.check.status", result.status().name()), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.check.mobs", result.totalMobs()), false);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable(safe
+                        ? "shadecamp.camp.check.result.ok" : "shadecamp.camp.check.result.bad"), false);
         return safe ? 1 : 0;
     }
 
     private static int executeClearAll(CommandContext<CommandSourceStack> ctx) {
         if (!ctx.getSource().hasPermission(2)) {
-            ctx.getSource().sendFailure(Component.literal("§c你没有权限清除全部据点，需要管理员权限"));
+            ctx.getSource().sendFailure(Component.translatable("shadecamp.camp.clearall.noperm"));
             return 0;
         }
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
-
         int count = manager.getAllCamps().size();
         manager.clearAll();
-
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§c已清除全部 " + count + " 个据点"
-        ), true);
+        ctx.getSource().sendSuccess(() ->
+                Component.translatable("shadecamp.camp.clearall.success", count), true);
         return 1;
     }
 
@@ -420,25 +360,15 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         return SharedSuggestionProvider.suggest(
-                manager.getAllCamps().stream()
-                        .map(Camp::getName),
-                builder
-        );
+                manager.getAllCamps().stream().map(Camp::getName), builder);
     }
 
     private static CompletableFuture<Suggestions> suggestEntities(
             CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        // 建议常用的敌对生物
         return SharedSuggestionProvider.suggest(List.of(
-                "minecraft:zombie",
-                "minecraft:skeleton",
-                "minecraft:spider",
-                "minecraft:creeper",
-                "minecraft:husk",
-                "minecraft:stray",
-                "minecraft:slime",
-                "minecraft:witch",
-                "minecraft:phantom",
+                "minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
+                "minecraft:creeper", "minecraft:husk", "minecraft:stray",
+                "minecraft:slime", "minecraft:witch", "minecraft:phantom",
                 "minecraft:enderman"
         ), builder);
     }
@@ -449,25 +379,20 @@ public class CampCommand {
         ServerLevel world = ctx.getSource().getLevel();
         CampManager manager = CampManager.getInstance(world);
         Camp camp = manager.getCamp(name);
-
-        if (camp == null) {
-            return Suggestions.empty();
-        }
-
+        if (camp == null) return Suggestions.empty();
         return SharedSuggestionProvider.suggest(camp.getMobConfig().keySet(), builder);
     }
 
     // ==================== 工具方法 ====================
 
+    /** 格式化怪物配置为显示文字，实体名使用 translatable */
     private static String formatMobConfig(java.util.Map<String, Integer> config) {
         return config.entrySet().stream()
                 .map(e -> {
                     String id = e.getKey();
-                    // 简化显示：去掉 "minecraft:" 前缀
-                    if (id.startsWith("minecraft:")) {
-                        id = id.substring(10);
-                    }
-                    return "§e" + id + "§7×" + e.getValue();
+                    String shortId = id.startsWith("minecraft:") ? id.substring(10) : id;
+                    // 尝试使用 translatable 实体名称，失败则用短 ID
+                    return "§e" + shortId + "§7×" + e.getValue();
                 })
                 .collect(Collectors.joining(" "));
     }

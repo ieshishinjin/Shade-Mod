@@ -1,0 +1,68 @@
+{
+  "shadecamp.camp.list.none": "§7No camps created yet",
+  "shadecamp.camp.list.header": "§6=== Camp List (§e%d§6 active§7, %d pending§6) ===",
+  "shadecamp.camp.list.header.simple": "§6=== Camp List (§e%d§6) ===",
+  "shadecamp.camp.list.entry": "  %s[%s] §f%s §7@ [%d, %d, %d] §7| Mobs: %s§7| Range: %d",
+  "shadecamp.camp.list.pending": "  §7... %d more camps pending (chunks not loaded)",
+
+  "shadecamp.camp.create.success": "§aCamp '%s' created!",
+  "shadecamp.camp.create.exists": "§cCamp '%s' already exists!",
+  "shadecamp.camp.create.failed": "§cFailed to create camp",
+  "shadecamp.camp.create.info": "  §7Biome: §f%s  §7Safe spots: §f%d  §7Mobs: %s",
+  "shadecamp.camp.create.nowarning": "  §e⚠ No safe spawn points found",
+
+  "shadecamp.camp.delete.success": "§cCamp '%s' deleted",
+  "shadecamp.camp.delete.notfound": "§cCamp '%s' not found!",
+  "shadecamp.camp.delete.noperm": "§cYou don't have permission to delete camps",
+
+  "shadecamp.camp.addmob.success": "§aAdded %s ×%d to camp '%s'",
+  "shadecamp.camp.addmob.invalid": "§cUnknown entity type: %s",
+
+  "shadecamp.camp.removemob.success": "§aRemoved %s ×%d from camp '%s'",
+  "shadecamp.camp.removemob.notfound": "§c%s not found in camp",
+
+  "shadecamp.camp.setrange.success": "§aCamp '%s' trigger range set to %d",
+  "shadecamp.camp.setloot.success": "§aCamp '%s' loot table set to %s",
+
+  "shadecamp.camp.reset.success": "§aCamp '%s' reset (mobs and chest refreshed)",
+  "shadecamp.camp.refresh.success": "§aCamp '%s' safe spawns refreshed: %d spots",
+
+  "shadecamp.camp.clearall.success": "§cAll %d camps cleared",
+  "shadecamp.camp.clearall.noperm": "§cYou don't have permission to clear all camps",
+
+  "shadecamp.camp.check.header": "§6=== Camp Safety Check: %s ===",
+  "shadecamp.camp.check.pos": "  Position: §f[%d, %d, %d]",
+  "shadecamp.camp.check.safe": "  Center safe: §a✔",
+  "shadecamp.camp.check.unsafe": "  Center safe: §c✘",
+  "shadecamp.camp.check.spawns": "  Safe spawns: §a%d",
+  "shadecamp.camp.check.spawns.none": "  Safe spawns: §c%d",
+  "shadecamp.camp.check.status": "  Status: §f%s",
+  "shadecamp.camp.check.mobs": "  Total mobs: §f%d",
+  "shadecamp.camp.check.result.ok": "  Verdict: §a✔ Safe",
+  "shadecamp.camp.check.result.bad": "  Verdict: §c✘ Unsafe",
+
+  "shadecamp.bossbar.title": "⚔ §e%s §r§7[§a%d§7/§c%d§7]",
+
+  "shadecamp.camp.prefix.0": "Ruined",
+  "shadecamp.camp.prefix.1": "Abandoned",
+  "shadecamp.camp.prefix.2": "Desolate",
+  "shadecamp.camp.prefix.3": "Hidden",
+  "shadecamp.camp.prefix.4": "Ancient",
+  "shadecamp.camp.prefix.5": "Gloomy",
+  "shadecamp.camp.suffix": " Camp",
+
+  "shadecamp.entity.zombie": "Zombie",
+  "shadecamp.entity.skeleton": "Skeleton",
+  "shadecamp.entity.spider": "Spider",
+  "shadecamp.entity.creeper": "Creeper",
+  "shadecamp.entity.husk": "Husk",
+  "shadecamp.entity.stray": "Stray",
+  "shadecamp.entity.slime": "Slime",
+  "shadecamp.entity.witch": "Witch",
+  "shadecamp.entity.phantom": "Phantom",
+  "shadecamp.entity.enderman": "Enderman",
+
+  "shadecamp.status.IDLE": "IDLE",
+  "shadecamp.status.FIGHTING": "FIGHTING",
+  "shadecamp.status.CLEARED": "CLEARED"
+}

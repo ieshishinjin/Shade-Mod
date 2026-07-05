@@ -152,14 +152,11 @@ public class Camp {
     }
 
     /**
-     * 生成 BOSS 进度条标题
+     * 生成 BOSS 进度条标题（使用 translatable）
      */
     private Component makeBossBarTitle(int killed) {
         int total = getTotalMobCount();
-        return Component.literal(String.format(
-                "⚔ §e%s §r§7[%d/%d]",
-                name, killed, total
-        ));
+        return Component.translatable("shadecamp.bossbar.title", name, killed, total);
     }
 
     // === Getters & Setters ===

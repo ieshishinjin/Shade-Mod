@@ -394,21 +394,78 @@ public class CampManager {
         int created = 0;
         while (it.hasNext()) {
             BlockPos pending = it.next();
-
-            // 区块必须已加载
             if (!world.isLoaded(pending)) continue;
 
-            // 尝试完成创建（finalizeCamp 内部做完整检查）
             Camp camp = CampWorldGenerator.finalizeCamp(world, pending, this);
-            if (camp != null) created++;
-
-            it.remove(); // 无论成功失败，只试一次
+            if (camp != null) {
+                // 创建后立刻预生成怪物，散布在据点各处
+                spawnIdleMobs(camp);
+                created++;
+            }
+            it.remove();
         }
 
         if (created > 0) {
-            ShadeMod.LOGGER.info("[shadecamp] 本轮自动创建 {} 个据点", created);
+            ShadeMod.LOGGER.info("[shadecamp] 本轮自动创建 {} 个据点，怪物已预生成", created);
             save();
         }
+    }
+
+    /** 据点创建后立即预生成怪物（闲置状态，散布在各生成点） */
+    private void spawnIdleMobs(Camp camp) {
+        BlockPos campPos = camp.getBlockPos();
+        List<BlockPos> spawnPoints = camp.getSafeSpawnBlockPositions();
+        Set<UUID> spawnedIds = new HashSet<>();
+        Random random = new Random(world.getSeed() + campPos.asLong());
+
+        int spawnedCount = 0;
+        for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {
+            String entityId = entry.getKey();
+            int count = entry.getValue();
+            var entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(entityId));
+            if (entityType == null) continue;
+
+            for (int i = 0; i < count; i++) {
+                if (spawnPoints.isEmpty()) break;
+                BlockPos spawnPos = spawnPoints.get(random.nextInt(spawnPoints.size()));
+
+                Entity entity = entityType.create(world);
+                if (entity != null) {
+                    entity.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
+                    if (entity instanceof Mob mob) {
+                        mob.setPersistenceRequired();
+                        mob.setAggressive(false);
+                        mob.setTarget(null);
+                    }
+                    world.addFreshEntity(entity);
+                    spawnedIds.add(entity.getUUID());
+                    spawnedCount++;
+                }
+            }
+        }
+
+        camp.setActiveMobIds(spawnedIds);
+        ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 预生成 {} 只怪物，散布在 {} 个位置",
+                camp.getName(), spawnedCount, spawnPoints.size());
+        save();
+    }
+
+    /** 玩家进入范围，激活闲置怪物 */
+    private void aggroMobs(Camp camp) {
+        ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 怪物被激活！", camp.getName());
+        ServerPlayer nearest = findNearestPlayer(camp);
+
+        for (UUID uuid : camp.getActiveMobIds()) {
+            Entity entity = world.getEntity(uuid);
+            if (entity instanceof Mob mob && entity.isAlive()) {
+                mob.setAggressive(true);
+                if (nearest != null) mob.setTarget(nearest);
+            }
+        }
+
+        camp.setStatus(Camp.Status.FIGHTING);
+        camp.getOrCreateBossBar();
+        camp.syncBossBarPlayers(getPlayersInRange(camp), camp.getActiveMobIds().size());
     }
 
     /**
@@ -447,19 +504,24 @@ public class CampManager {
             double distSq = player.distanceToSqr(campPos.getX() + 0.5, campPos.getY() + 0.5, campPos.getZ() + 0.5);
             if (distSq <= rangeSq) {
                 ShadeMod.LOGGER.info(
-                        "[shadecamp] 玩家 {} 进入据点 {} 范围 ({} < {})，激活！",
+                        "[shadecamp] 玩家 {} 进入据点 {} 范围 ({} < {})",
                         player.getName().getString(),
                         camp.getName(),
                         String.format("%.1f", Math.sqrt(distSq)),
                         camp.getTriggerRange()
                 );
-                // 激活据点
                 try {
-                    activateCamp(camp);
+                    if (!camp.getActiveMobIds().isEmpty()) {
+                        // 已有预生成的怪物 → 直接激活
+                        aggroMobs(camp);
+                    } else {
+                        // 旧式据点 → 现场生成+激活
+                        activateCamp(camp);
+                    }
                 } catch (Exception e) {
                     ShadeMod.LOGGER.error("[shadecamp] 激活据点 {} 失败", camp.getName(), e);
                 }
-                return; // 一次只激活一个玩家
+                return;
             }
         }
     }
