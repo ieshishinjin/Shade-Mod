@@ -404,15 +404,13 @@ public class CampManager {
 
             Camp camp = CampWorldGenerator.finalizeCamp(world, pending, this);
             if (camp != null) {
-                // 创建后立刻预生成怪物，散布在据点各处
-                spawnIdleMobs(camp);
                 created++;
             }
             it.remove();
         }
 
         if (created > 0) {
-            ShadeMod.LOGGER.info("[shadecamp] 本轮自动创建 {} 个据点，怪物已预生成", created);
+            ShadeMod.LOGGER.debug("[shadecamp] 本轮自动创建 {} 个据点，怪物已预生成", created);
             save();
         }
     }
@@ -469,6 +467,7 @@ public class CampManager {
             }
         }
 
+        camp.setEnteredFightingTick(world.getGameTime());
         camp.setStatus(Camp.Status.FIGHTING);
         camp.getOrCreateBossBar();
         camp.syncBossBarPlayers(getPlayersInRange(camp), camp.getActiveMobIds().size());
@@ -494,10 +493,20 @@ public class CampManager {
         if (camp.getRefreshTime() > 0 && camp.getLastClearedTime() > 0) {
             long elapsed = gameTime - camp.getLastClearedTime();
             if (elapsed >= camp.getRefreshTime() * 20L) {
-                ShadeMod.LOGGER.info("[shadecamp] 据点 {} 刷新时间到，重置", camp.getName());
+                ShadeMod.LOGGER.debug("[shadecamp] 据点 {} 刷新时间到，重置", camp.getName());
                 resetCamp(camp.getName());
                 return;
             }
+        }
+
+        // === 夜间重生：无存活怪物时在夜晚重新生成 ===
+        long dayTime = world.getDayTime() % 24000;
+        boolean isNight = dayTime >= 13000 && dayTime < 23000;
+        if (isNight
+                && camp.getActiveMobIds().isEmpty()
+                && !camp.getMobConfig().isEmpty()
+                && camp.getStatus() == Camp.Status.IDLE) {
+            spawnIdleMobs(camp);
         }
 
         // 检查是否有玩家进入范围
@@ -571,8 +580,9 @@ public class CampManager {
         List<ServerPlayer> playersInRange = getPlayersInRange(camp);
         camp.syncBossBarPlayers(playersInRange, aliveCount);
 
-        // 全部击杀 → 清空
-        if (allDead && camp.getTotalMobCount() > 0) {
+        // 全部击杀 → 清空（但至少等待 3 tick 防止误判）
+        if (allDead && camp.getTotalMobCount() > 0
+                && gameTime - camp.getEnteredFightingTick() >= 3) {
             clearCamp(camp);
         }
     }
@@ -597,18 +607,18 @@ public class CampManager {
      * 激活据点 - 生成怪物
      */
     private void activateCamp(Camp camp) {
-        ShadeMod.LOGGER.info("[shadecamp] === 激活据点: {} ===", camp.getName());
+        ShadeMod.LOGGER.debug("[shadecamp] === 激活据点: {} ===", camp.getName());
 
         BlockPos campPos = camp.getBlockPos();
         List<BlockPos> spawnPoints = camp.getSafeSpawnBlockPositions();
-        ShadeMod.LOGGER.info("[shadecamp] 缓存安全点: {} 个", spawnPoints.size());
+        ShadeMod.LOGGER.debug("[shadecamp] 缓存安全点: {} 个", spawnPoints.size());
 
         // 如果缓存为空，尝试重新计算
         if (spawnPoints.isEmpty()) {
-            ShadeMod.LOGGER.info("[shadecamp] 缓存为空，重新计算安全点...");
+            ShadeMod.LOGGER.debug("[shadecamp] 缓存为空，重新计算安全点...");
             spawnPoints = CampSpawnValidator.findSafeSpawnPoints(world, campPos, 8);
             camp.setSafeSpawnPointsFromBlocks(spawnPoints);
-            ShadeMod.LOGGER.info("[shadecamp] 重新计算后安全点: {} 个", spawnPoints.size());
+            ShadeMod.LOGGER.debug("[shadecamp] 重新计算后安全点: {} 个", spawnPoints.size());
         }
 
         // 如果依然没有安全位置，拒绝激活
@@ -624,7 +634,7 @@ public class CampManager {
             String entityId = entry.getKey();
             int count = entry.getValue();
 
-            ShadeMod.LOGGER.info("[shadecamp]   - 生成: {} × {}", entityId, count);
+            ShadeMod.LOGGER.debug("[shadecamp]   - 生成: {} × {}", entityId, count);
 
             EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(entityId));
             if (entityType == null) {
@@ -652,7 +662,7 @@ public class CampManager {
 
                     world.addFreshEntity(entity);
                     spawnedIds.add(entity.getUUID());
-                    ShadeMod.LOGGER.info("[shadecamp]     → {} @ [{}, {}, {}]",
+                    ShadeMod.LOGGER.debug("[shadecamp]     → {} @ [{}, {}, {}]",
                             entityId, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
                 } else {
                     ShadeMod.LOGGER.warn("[shadecamp]     → 实体创建失败 (create 返回 null)");
@@ -660,7 +670,7 @@ public class CampManager {
             }
         }
 
-        ShadeMod.LOGGER.info("[shadecamp] 共计生成 {} 只怪物", spawnedIds.size());
+        ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", spawnedIds.size());
 
         // 播放激活效果
         CampRewardHandler.playActivationEffects(world, Vec3.atCenterOf(
@@ -672,16 +682,17 @@ public class CampManager {
         ));
 
         camp.setActiveMobIds(spawnedIds);
+        camp.setEnteredFightingTick(world.getGameTime());
         camp.setStatus(Camp.Status.FIGHTING);
 
         // 创建 BOSS 进度条并同步给范围内的玩家
         camp.getOrCreateBossBar();
         List<ServerPlayer> playersInRange = getPlayersInRange(camp);
-        ShadeMod.LOGGER.info("[shadecamp] 范围内玩家: {} 人", playersInRange.size());
+        ShadeMod.LOGGER.debug("[shadecamp] 范围内玩家: {} 人", playersInRange.size());
         camp.syncBossBarPlayers(playersInRange, spawnedIds.size());
 
         save();
-        ShadeMod.LOGGER.info("[shadecamp] === 据点 {} 激活完成 ===", camp.getName());
+        ShadeMod.LOGGER.debug("[shadecamp] === 据点 {} 激活完成 ===", camp.getName());
     }
 
     /**

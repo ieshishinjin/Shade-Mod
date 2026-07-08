@@ -39,6 +39,8 @@ public class Camp {
     private transient Set<UUID> activeMobIds = new HashSet<>();
     /** 屏幕顶部的 BOSS 进度条（类似末影龙血条） */
     private transient ServerBossEvent bossBar;
+    /** 进入战斗时的游戏 tick（防止刚激活就被判定全灭） */
+    private transient long enteredFightingTick = 0;
 
     public Camp() {
     }
@@ -193,6 +195,9 @@ public class Camp {
 
     public Set<UUID> getActiveMobIds() { return activeMobIds; }
     public void setActiveMobIds(Set<UUID> activeMobIds) { this.activeMobIds = activeMobIds; }
+
+    public long getEnteredFightingTick() { return enteredFightingTick; }
+    public void setEnteredFightingTick(long tick) { this.enteredFightingTick = tick; }
 
     public int getTotalMobCount() {
         return mobConfig.values().stream().mapToInt(Integer::intValue).sum();
