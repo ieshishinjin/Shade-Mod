@@ -1,0 +1,43 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "rolls": {
+        "type": "minecraft:uniform",
+        "min": 5.0,
+        "max": 9.0
+      },
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:diamond",           "weight": 10, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:gold_ingot",        "weight": 8,  "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 6.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:netherite_scrap",   "weight": 4 },
+        { "type": "minecraft:item", "name": "minecraft:emerald",           "weight": 8,  "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 4.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:ender_pearl",       "weight": 6,  "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:obsidian",          "weight": 6,  "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 5.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:golden_apple",      "weight": 5 },
+        { "type": "minecraft:item", "name": "minecraft:diamond_horse_armor","weight": 2 }
+      ]
+    },
+    {
+      "bonus_rolls": 0.0,
+      "rolls": {
+        "type": "minecraft:uniform",
+        "min": 2.0,
+        "max": 4.0
+      },
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:experience_bottle",  "weight": 10, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3.0, "max": 8.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:diamond_sword",      "weight": 4 },
+        { "type": "minecraft:item", "name": "minecraft:diamond_chestplate", "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:diamond_boots",      "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:diamond_helmet",     "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:diamond_leggings",   "weight": 3 },
+        { "type": "minecraft:item", "name": "minecraft:enchanted_book",     "weight": 5 },
+        { "type": "minecraft:item", "name": "minecraft:totem_of_undying",   "weight": 2 },
+        { "type": "minecraft:item", "name": "minecraft:netherite_ingot",    "weight": 2 }
+      ]
+    }
+  ],
+  "random_sequence": "shadecamp:chests/camp_epic"
+}

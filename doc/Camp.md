@@ -172,6 +172,19 @@ PendingCamps → 区块加载 → world.isLoaded()
 
 ### 6.3 预生成与激活
 
+#### 宝箱等级
+
+根据据点怪物总数决定宝箱等级：
+
+| 怪物总数 | 等级 | 宝箱外观 | 战利品表 | 特效 |
+|----------|------|----------|----------|------|
+| 3~4 | COMMON | 普通木箱 | `camp_common` | 绿色粒子 |
+| 5 | UNCOMMON | 普通木箱 | `camp_uncommon` | 末地烛粒子 |
+| 6~7 | RARE | 普通木箱 | `camp_rare` | 末地烛 + 挑战音效 |
+| 8+ | EPIC | **末影箱** | `camp_epic` | 闪光粒子 + 光柱 |
+
+战利品表文件位于 `data/shadecamp/loot_tables/chests/`，可通过数据包自定义。
+
 ```mermaid
 stateDiagram-v2
     [*] --> 夜间_or_激活

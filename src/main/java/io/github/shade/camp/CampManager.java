@@ -708,6 +708,9 @@ public class CampManager {
      * 清空据点 - 生成奖励宝箱
      */
     private void clearCamp(Camp camp) {
+        // 防重复触发
+        if (camp.getStatus() == Camp.Status.CLEARED) return;
+
         ShadeMod.LOGGER.info("据点 {} 已被清空！", camp.getName());
 
         camp.removeBossBar();
@@ -715,8 +718,9 @@ public class CampManager {
         camp.setLastClearedTime(world.getGameTime());
         camp.clearActiveEntities();
 
-        // 生成宝箱
-        CampRewardHandler.spawnRewardChest(world, camp);
+        // 按怪物数量分等级生成宝箱
+        CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount());
+        CampRewardHandler.spawnRewardChest(world, camp, tier);
 
         save();
     }
