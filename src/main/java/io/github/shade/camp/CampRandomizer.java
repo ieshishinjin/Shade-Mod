@@ -83,7 +83,7 @@ public class CampRandomizer {
         selectedTypes = selectedTypes.subList(0, speciesCount);
 
         // 3. 为每种怪物分配数量（1～3只）
-        int remaining = 3 + random.nextInt(6); // 目标总数 3~8
+        int remaining = 3 + random.nextInt(8); // 目标总数 3~10
         int allocated = 0;
 
         for (int i = 0; i < selectedTypes.size(); i++) {

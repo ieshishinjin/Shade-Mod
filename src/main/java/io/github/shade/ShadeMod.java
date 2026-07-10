@@ -32,8 +32,6 @@ public class ShadeMod implements ModInitializer {
                 CampCommand.register(dispatcher)
         );
 
-        LOGGER.info("据点系统已加载，使用 /camp 命令管理");
-        LOGGER.info("Shade 模组初始化完成！版本 {}", getClass().getPackage().getImplementationVersion());
     }
 
     public static ResourceLocation id(String path) {

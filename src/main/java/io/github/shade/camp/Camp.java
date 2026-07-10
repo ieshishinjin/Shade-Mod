@@ -35,12 +35,16 @@ public class Camp {
     private long lastClearedTime = 0;    // 上次清空时间戳
 
     // === 运行时字段（不序列化） ===
-    /** 当前已生成怪物的 UUID */
+    /** 当前已生成怪物的 UUID（用于序列化/持久化） */
     private transient Set<UUID> activeMobIds = new HashSet<>();
-    /** 屏幕顶部的 BOSS 进度条（类似末影龙血条） */
+    /** 当前已生成怪物的实体引用（直接持有，不用 UUID 反查避免查找失败） */
+    private transient List<net.minecraft.world.entity.Entity> activeEntities = new ArrayList<>();
+    /** 屏幕顶部的 BOSS 进度条 */
     private transient ServerBossEvent bossBar;
-    /** 进入战斗时的游戏 tick（防止刚激活就被判定全灭） */
+    /** 进入战斗时的游戏 tick */
     private transient long enteredFightingTick = 0;
+    /** 上次生成怪物的 tick（防止无限循环刷新） */
+    private transient long lastSpawnedTick = -12000;
 
     public Camp() {
     }
@@ -196,8 +200,17 @@ public class Camp {
     public Set<UUID> getActiveMobIds() { return activeMobIds; }
     public void setActiveMobIds(Set<UUID> activeMobIds) { this.activeMobIds = activeMobIds; }
 
+    public List<net.minecraft.world.entity.Entity> getActiveEntities() { return activeEntities; }
+    public void clearActiveEntities() { this.activeEntities.clear(); this.activeMobIds.clear(); }
+    public void addActiveEntity(net.minecraft.world.entity.Entity entity) {
+        this.activeEntities.add(entity);
+        this.activeMobIds.add(entity.getUUID());
+    }
+
     public long getEnteredFightingTick() { return enteredFightingTick; }
     public void setEnteredFightingTick(long tick) { this.enteredFightingTick = tick; }
+    public long getLastSpawnedTick() { return lastSpawnedTick; }
+    public void setLastSpawnedTick(long tick) { this.lastSpawnedTick = tick; }
 
     public int getTotalMobCount() {
         return mobConfig.values().stream().mapToInt(Integer::intValue).sum();

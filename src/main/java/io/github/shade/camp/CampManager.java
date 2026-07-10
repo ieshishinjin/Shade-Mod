@@ -108,7 +108,7 @@ public class CampManager {
             if (wrapper != null && wrapper.camps != null) {
                 for (Camp camp : wrapper.camps) {
                     // 重置运行时状态
-                    camp.setActiveMobIds(new HashSet<>());
+                    camp.clearActiveEntities();
                     camps.put(camp.getName(), camp);
                 }
             }
@@ -245,7 +245,9 @@ public class CampManager {
         // 重置状态
         camp.setStatus(Camp.Status.IDLE);
         camp.setLastClearedTime(0);
+        camp.setLastSpawnedTick(0);  // 重置冷却，允许立即重生
         camp.setActiveMobIds(new HashSet<>());
+        camp.clearActiveEntities();
 
         // 重新生成怪物配置
         var biome = world.getBiome(camp.getBlockPos());
@@ -417,9 +419,14 @@ public class CampManager {
 
     /** 据点创建后立即预生成怪物（闲置状态，散布在各生成点） */
     private void spawnIdleMobs(Camp camp) {
+        // 防止无限循环刷新（至少间隔 10 分钟=12000 tick）
+        // 但首次生成（lastSpawnedTick <= 0）不受限制
+        long lastSpawn = camp.getLastSpawnedTick();
+        if (lastSpawn > 0 && world.getGameTime() - lastSpawn < 12000) return;
+        camp.setLastSpawnedTick(world.getGameTime());
+
         BlockPos campPos = camp.getBlockPos();
         List<BlockPos> spawnPoints = camp.getSafeSpawnBlockPositions();
-        Set<UUID> spawnedIds = new HashSet<>();
         Random random = new Random(world.getSeed() + campPos.asLong());
 
         int spawnedCount = 0;
@@ -442,13 +449,11 @@ public class CampManager {
                         mob.setTarget(null);
                     }
                     world.addFreshEntity(entity);
-                    spawnedIds.add(entity.getUUID());
+                    camp.addActiveEntity(entity);
                     spawnedCount++;
                 }
             }
         }
-
-        camp.setActiveMobIds(spawnedIds);
         ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 预生成 {} 只怪物，散布在 {} 个位置",
                 camp.getName(), spawnedCount, spawnPoints.size());
         save();
@@ -459,8 +464,7 @@ public class CampManager {
         ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 怪物被激活！", camp.getName());
         ServerPlayer nearest = findNearestPlayer(camp);
 
-        for (UUID uuid : camp.getActiveMobIds()) {
-            Entity entity = world.getEntity(uuid);
+        for (Entity entity : camp.getActiveEntities()) {
             if (entity instanceof Mob mob && entity.isAlive()) {
                 mob.setAggressive(true);
                 if (nearest != null) mob.setTarget(nearest);
@@ -500,12 +504,18 @@ public class CampManager {
         }
 
         // === 夜间重生：无存活怪物时在夜晚重新生成 ===
+        // 冷却时间至少 12000 ticks（10分钟），防止无限刷怪
         long dayTime = world.getDayTime() % 24000;
         boolean isNight = dayTime >= 13000 && dayTime < 23000;
+        // 夜间重生冷却检查 - 首次生成不受限制
+        long lastSpawn3 = camp.getLastSpawnedTick();
+        boolean canSpawn = lastSpawn3 <= 0 || (gameTime - lastSpawn3 >= 12000);
         if (isNight
                 && camp.getActiveMobIds().isEmpty()
                 && !camp.getMobConfig().isEmpty()
-                && camp.getStatus() == Camp.Status.IDLE) {
+                && camp.getStatus() == Camp.Status.IDLE
+                && canSpawn) {
+            ShadeMod.LOGGER.debug("[shadecamp] 据点 {} 夜间重生冷却已过，重新生成怪物", camp.getName());
             spawnIdleMobs(camp);
         }
 
@@ -545,27 +555,24 @@ public class CampManager {
      * 处理战斗中的据点
      */
     private void tickFighting(Camp camp, long gameTime) {
-        Set<UUID> activeIds = camp.getActiveMobIds();
+        List<Entity> entities = camp.getActiveEntities();
 
-        // 如果没有活跃怪物ID，但状态是FIGHTING（可能服务器重启），重置
-        if (activeIds.isEmpty()) {
-            // 清理并重置
-            resetCamp(camp.getName());
+        // 如果没有活跃怪物 → 战斗结束（避免回 IDLE 导致重新刷怪）
+        if (entities.isEmpty()) {
+            clearCamp(camp);
             return;
         }
 
         // 检查是否所有怪物都已死亡
         boolean allDead = true;
-        Iterator<UUID> iterator = activeIds.iterator();
-        while (iterator.hasNext()) {
-            UUID uuid = iterator.next();
-            Entity entity = world.getEntity(uuid);
+        Iterator<Entity> it = entities.iterator();
+        while (it.hasNext()) {
+            Entity entity = it.next();
             if (entity == null || !entity.isAlive()) {
-                // 实体已死亡或消失
-                iterator.remove();
+                it.remove();
+                camp.getActiveMobIds().remove(entity != null ? entity.getUUID() : null);
             } else {
                 allDead = false;
-                // 检查是否有玩家在范围内，如果没有，让怪物恢复原位
                 if (!isAnyPlayerInRange(camp)) {
                     if (entity instanceof Mob mob) {
                         mob.setTarget(null);
@@ -576,7 +583,7 @@ public class CampManager {
         }
 
         // 更新 BOSS 进度条（存活数/总数）
-        int aliveCount = activeIds.size();
+        int aliveCount = entities.size();
         List<ServerPlayer> playersInRange = getPlayersInRange(camp);
         camp.syncBossBarPlayers(playersInRange, aliveCount);
 
@@ -607,7 +614,11 @@ public class CampManager {
      * 激活据点 - 生成怪物
      */
     private void activateCamp(Camp camp) {
-        ShadeMod.LOGGER.debug("[shadecamp] === 激活据点: {} ===", camp.getName());
+        // 防无限刷新（至少间隔 10 分钟=12000 tick）
+        // 但首次生成（lastSpawnedTick <= 0）不受限制
+        long lastSpawn2 = camp.getLastSpawnedTick();
+        if (lastSpawn2 > 0 && world.getGameTime() - lastSpawn2 < 12000) return;
+        camp.setLastSpawnedTick(world.getGameTime());
 
         BlockPos campPos = camp.getBlockPos();
         List<BlockPos> spawnPoints = camp.getSafeSpawnBlockPositions();
@@ -627,7 +638,6 @@ public class CampManager {
             return;
         }
 
-        Set<UUID> spawnedIds = new HashSet<>();
         Random random = new Random(world.getSeed() + campPos.asLong() + gameTime());
 
         for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {
@@ -661,7 +671,7 @@ public class CampManager {
                     }
 
                     world.addFreshEntity(entity);
-                    spawnedIds.add(entity.getUUID());
+                    camp.addActiveEntity(entity);
                     ShadeMod.LOGGER.debug("[shadecamp]     → {} @ [{}, {}, {}]",
                             entityId, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
                 } else {
@@ -670,7 +680,7 @@ public class CampManager {
             }
         }
 
-        ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", spawnedIds.size());
+        ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", camp.getActiveMobIds().size());
 
         // 播放激活效果
         CampRewardHandler.playActivationEffects(world, Vec3.atCenterOf(
@@ -681,7 +691,6 @@ public class CampManager {
                 )
         ));
 
-        camp.setActiveMobIds(spawnedIds);
         camp.setEnteredFightingTick(world.getGameTime());
         camp.setStatus(Camp.Status.FIGHTING);
 
@@ -689,7 +698,7 @@ public class CampManager {
         camp.getOrCreateBossBar();
         List<ServerPlayer> playersInRange = getPlayersInRange(camp);
         ShadeMod.LOGGER.debug("[shadecamp] 范围内玩家: {} 人", playersInRange.size());
-        camp.syncBossBarPlayers(playersInRange, spawnedIds.size());
+        camp.syncBossBarPlayers(playersInRange, camp.getActiveMobIds().size());
 
         save();
         ShadeMod.LOGGER.debug("[shadecamp] === 据点 {} 激活完成 ===", camp.getName());
@@ -704,7 +713,7 @@ public class CampManager {
         camp.removeBossBar();
         camp.setStatus(Camp.Status.CLEARED);
         camp.setLastClearedTime(world.getGameTime());
-        camp.setActiveMobIds(new HashSet<>());
+        camp.clearActiveEntities();
 
         // 生成宝箱
         CampRewardHandler.spawnRewardChest(world, camp);
@@ -753,13 +762,12 @@ public class CampManager {
      * 移除据点所有已生成的怪物
      */
     private void despawnCampMobs(Camp camp) {
-        for (UUID uuid : camp.getActiveMobIds()) {
-            Entity entity = world.getEntity(uuid);
+        for (Entity entity : camp.getActiveEntities()) {
             if (entity != null) {
                 entity.remove(Entity.RemovalReason.DISCARDED);
             }
         }
-        camp.setActiveMobIds(new HashSet<>());
+        camp.clearActiveEntities();
     }
 
     /**
