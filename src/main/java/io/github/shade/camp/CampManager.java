@@ -371,7 +371,7 @@ public class CampManager {
         tickCounter++;
 
         // 1. 处理待创建的候选据点（区块加载后自动完成）
-        processPendingCamps();
+        if (tickCounter % 10 == 0) { processPendingCamps(); }
 
         // 2. 更新已激活据点的状态
         long gameTime = world.getGameTime();
@@ -385,7 +385,7 @@ public class CampManager {
         }
 
         // 每 5 秒自动保存一次（100 ticks）
-        if (tickCounter % 100 == 0) {
+        if (tickCounter % 200 == 0) {
             save();
         }
     }
