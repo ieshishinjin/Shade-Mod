@@ -121,14 +121,13 @@ public class Camp {
 
     /**
      * 更新 BOSS 进度条的名称和进度
-     *
-     * @param aliveCount 当前存活的怪物数（不含已击杀）
      */
     public void updateBossBar(int aliveCount) {
         if (bossBar != null) {
             int total = getTotalMobCount();
-            float progress = total > 0 ? (float) aliveCount / total : 0f;
-            bossBar.setName(makeBossBarTitle(total - aliveCount));
+            if (total < 1) total = 1;
+            float progress = (float) aliveCount / total;
+            bossBar.setName(Component.translatable("shadecamp.bossbar.title", name, total - aliveCount, total));
             bossBar.setProgress(progress);
         }
     }

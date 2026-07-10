@@ -503,23 +503,7 @@ public class CampManager {
             }
         }
 
-        // === 夜间重生：无存活怪物时在夜晚重新生成 ===
-        // 冷却时间至少 12000 ticks（10分钟），防止无限刷怪
-        long dayTime = world.getDayTime() % 24000;
-        boolean isNight = dayTime >= 13000 && dayTime < 23000;
-        // 夜间重生冷却检查 - 首次生成不受限制
-        long lastSpawn3 = camp.getLastSpawnedTick();
-        boolean canSpawn = lastSpawn3 <= 0 || (gameTime - lastSpawn3 >= 12000);
-        if (isNight
-                && camp.getActiveMobIds().isEmpty()
-                && !camp.getMobConfig().isEmpty()
-                && camp.getStatus() == Camp.Status.IDLE
-                && canSpawn) {
-            ShadeMod.LOGGER.debug("[shadecamp] 据点 {} 夜间重生冷却已过，重新生成怪物", camp.getName());
-            spawnIdleMobs(camp);
-        }
-
-        // 检查是否有玩家进入范围
+        // === 玩家靠近时生成/激活怪物 ===
         BlockPos campPos = camp.getBlockPos();
         double rangeSq = camp.getTriggerRange() * camp.getTriggerRange();
 

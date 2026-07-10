@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "rolls": {
+        "type": "minecraft:uniform",
+        "min": 2.0,
+        "max": 4.0
+      },
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:bone",          "weight": 20, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:rotten_flesh",  "weight": 20, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:string",        "weight": 15, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 2.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:stick",         "weight": 15, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
+        { "type": "minecraft:item", "name": "minecraft:spider_eye",    "weight": 5 },\n        { "type": "minecraft:item", "name": "minecraft:bread",         "weight": 8 },\n        { "type": "minecraft:item", "name": "minecraft:baked_potato",  "weight": 6 },\n        { "type": "minecraft:item", "name": "minecraft:pumpkin_pie",   "weight": 3 }
+      ]
+    }
+  ],
+  "random_sequence": "shadecamp:chests/camp_basic"
+}

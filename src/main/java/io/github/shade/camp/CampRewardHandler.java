@@ -27,8 +27,9 @@ public class CampRewardHandler {
 
     /** 宝箱等级：根据据点怪物总数决定 */
     public enum ChestTier {
-        COMMON   (3, 4,  Blocks.CHEST,       "shadecamp:chests/camp_common",   ParticleTypes.HAPPY_VILLAGER,  SoundEvents.PLAYER_LEVELUP,       20),
-        UNCOMMON (5, 5,  Blocks.CHEST,       "shadecamp:chests/camp_uncommon", ParticleTypes.END_ROD,         SoundEvents.PLAYER_LEVELUP,       30),
+        BASIC    (1, 2,  Blocks.CHEST,       "shadecamp:chests/camp_basic",     ParticleTypes.ASH,             SoundEvents.ITEM_BREAK,              8),
+        COMMON   (3, 4,  Blocks.CHEST,       "shadecamp:chests/camp_common",   ParticleTypes.HAPPY_VILLAGER,  SoundEvents.PLAYER_LEVELUP,          20),
+        UNCOMMON (5, 5,  Blocks.CHEST,       "shadecamp:chests/camp_uncommon", ParticleTypes.END_ROD,         SoundEvents.PLAYER_LEVELUP,          30),
         RARE     (6, 7,  Blocks.CHEST,       "shadecamp:chests/camp_rare",     ParticleTypes.END_ROD,         SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 40),
         EPIC     (8, 99, Blocks.ENDER_CHEST, "shadecamp:chests/camp_epic",     ParticleTypes.FLASH,           SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 60);
 
