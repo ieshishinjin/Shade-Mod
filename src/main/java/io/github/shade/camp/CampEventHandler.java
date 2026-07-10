@@ -32,11 +32,15 @@ public class CampEventHandler {
     }
 
     private static void onServerStarted(MinecraftServer server) {
-        ShadeMod.LOGGER.info("[shadecamp] ===== 世界据点初始化 =====");
+        ShadeMod.LOGGER.info("[shadecamp] ===== 关闭原版刷怪，启用据点系统 =====");
 
         for (ServerLevel level : server.getAllLevels()) {
             try {
                 if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
+
+                // 关闭原版自然刷怪
+                level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING).set(false, server);
+                ShadeMod.LOGGER.info("[shadecamp] doMobSpawning=false (原版刷怪已禁用)");
 
                 CampManager campManager = CampManager.getInstance(level);
                 ShadeMod.LOGGER.info("[shadecamp] 种子={}", level.getSeed());
@@ -91,6 +95,12 @@ public class CampEventHandler {
         try {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
+
+                // 每 5 秒强制确保原版刷怪关闭
+                if (level.getGameTime() % 100 == 0) {
+                    var rule = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING);
+                    if (rule.get()) rule.set(false, server);
+                }
 
                 CampManager campManager = CampManager.getInstance(level);
                 int before = campManager.getCampCount();
