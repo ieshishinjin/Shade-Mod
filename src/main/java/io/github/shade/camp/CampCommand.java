@@ -26,9 +26,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static net.minecraft.commands.Commands.literal;
 import static net.minecraft.commands.Commands.argument;
 
-/**
- * 据点命令系统 — 全部文字使用 translatable 实现 i18n
- */
+/** /camp 命令 — i18n */
 public class CampCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -338,6 +336,8 @@ public class CampCommand {
                         ? "shadecamp.camp.check.result.ok" : "shadecamp.camp.check.result.bad"), false);
         return safe ? 1 : 0;
     }
+
+
 
     private static int executeClearAll(CommandContext<CommandSourceStack> ctx) {
         if (!ctx.getSource().hasPermission(2)) {

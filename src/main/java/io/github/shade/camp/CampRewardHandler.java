@@ -18,9 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * 宝箱生成和奖励逻辑 — 按据点怪物数量分等级
- */
+/** 宝箱生成 — 按怪物数量分等级 */
 public class CampRewardHandler {
 
     private CampRewardHandler() {}
