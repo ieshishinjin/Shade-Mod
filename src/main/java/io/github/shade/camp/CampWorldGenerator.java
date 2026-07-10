@@ -7,9 +7,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.*;
 
-/**
- * 自动据点生成器 — 跳过所有安全检查，区块加载后直接创建
- */
+/** 种子计算+区块定稿 — 跳过安全检查 */
 public class CampWorldGenerator {
 
     private CampWorldGenerator() {}

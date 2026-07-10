@@ -11,12 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/**
- * 据点事件监听器
- * <p>
- * 据点怪物按原版规则：晚上活动、白天晒死。
- * 不干扰原版刷怪机制（doMobSpawning 保持默认）。
- */
+/** Camp 生命周期事件入口 */
 public class CampEventHandler {
 
     private static boolean registered = false;

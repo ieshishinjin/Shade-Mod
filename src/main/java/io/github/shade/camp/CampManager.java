@@ -1,4 +1,6 @@
+
 package io.github.shade.camp;
+import io.github.shade.worldlevel.WorldLevel;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -24,12 +26,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 据点管理器
- * <p>
- * 管理所有据点的加载、保存、状态更新和生命周期。
- * 单例模式，每个世界一个实例。
- */
+/** Camp 管理器 — CRUD、持久化、Tick 主循环 */
 public class CampManager {
 
     private static final Type CAMP_LIST_TYPE = new TypeToken<List<Camp>>() {}.getType();
@@ -467,6 +464,7 @@ public class CampManager {
         for (Entity entity : camp.getActiveEntities()) {
             if (entity instanceof Mob mob && entity.isAlive()) {
                 mob.setAggressive(true);
+                        
                 if (nearest != null) mob.setTarget(nearest);
             }
         }
@@ -624,6 +622,11 @@ public class CampManager {
 
         Random random = new Random(world.getSeed() + campPos.asLong() + gameTime());
 
+        int worldLevel = WorldLevel.getLevel(world);
+        if (worldLevel > 0) {
+            ShadeMod.LOGGER.info("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.formatLevel(worldLevel));
+        }
+
         for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {
             String entityId = entry.getKey();
             int count = entry.getValue();
@@ -646,6 +649,7 @@ public class CampManager {
                     if (entity instanceof Mob mob) {
                         mob.setPersistenceRequired();
                         mob.setAggressive(true);
+                        WorldLevel.applyScaling(mob, worldLevel);
 
                         // 锁定最近的玩家为目标
                         ServerPlayer nearest = findNearestPlayer(camp);
@@ -665,6 +669,31 @@ public class CampManager {
         }
 
         ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", camp.getActiveMobIds().size());
+        // 世界等级额外怪物
+        if (worldLevel > 0) {
+            var configTypes = camp.getMobConfig().keySet().toArray(new String[0]);
+            for (int wl = 0; wl < worldLevel; wl++) {
+                for (String eid : configTypes) {
+                    var xt = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(eid));
+                    if (xt == null) continue;
+                    Entity xe = xt.create(world);
+                    if (xe != null) {
+                        BlockPos sp = spawnPoints.get(random.nextInt(spawnPoints.size()));
+                        xe.setPos(sp.getX() + 0.5, sp.getY(), sp.getZ() + 0.5);
+                        if (xe instanceof Mob xm) {
+                            xm.setPersistenceRequired();
+                            xm.setAggressive(true);
+                            WorldLevel.applyScaling(xm, worldLevel);
+                            ServerPlayer nearest = findNearestPlayer(camp);
+                            if (nearest != null) xm.setTarget(nearest);
+                        }
+                        world.addFreshEntity(xe);
+                        camp.addActiveEntity(xe);
+                    }
+                }
+            }
+        }
+
 
         // 播放激活效果
         CampRewardHandler.playActivationEffects(world, Vec3.atCenterOf(
