@@ -15,7 +15,6 @@ public class CampWorldGenerator {
     private CampWorldGenerator() {}
 
     public static final String GENERATION_FLAG_PREFIX = "auto_";
-    private static int nameId = 0;
 
     public static List<BlockPos> generateCandidates(ServerLevel world) {
         // Handled in CampEventHandler, no separate method needed
@@ -69,10 +68,9 @@ public class CampWorldGenerator {
         List<BlockPos> spawnPoints = new ArrayList<>();
         spawnPoints.add(pos);
 
-        // 生成名称 + 据点
-        nameId++;
+        // 生成名称
         String[] pre = {"废弃", "破旧", "荒芜", "隐秘", "古老", "幽暗"};
-        String name = pre[new Random(world.getSeed() + x * 31L + z * 37L).nextInt(pre.length)] + "营地" + nameId;
+        String name = pre[new Random(world.getSeed() + x * 31L + z * 37L).nextInt(pre.length)] + "营地";
 
         Camp camp = new Camp(name, pos);
         camp.setSafeSpawnPointsFromBlocks(spawnPoints);
@@ -105,5 +103,4 @@ public class CampWorldGenerator {
         return camp;
     }
 
-    public static void resetNameId() { nameId = 0; }
 }
