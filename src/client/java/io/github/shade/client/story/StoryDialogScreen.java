@@ -299,8 +299,12 @@ public class StoryDialogScreen extends Screen {
                 }
             }
 
-            // 对话模式且文本已完全显示 → 推进（type=4 结束语不推进，自动关闭）
-            if (textFullyVisible && type != 1 && type != 4) {
+            // 对话/结束语已完全显示 → 推进或关闭
+            if (textFullyVisible && type != 1) {
+                if (type == 4) {
+                    Minecraft.getInstance().setScreen(null);
+                    return true;
+                }
                 ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
                 return true;
             }
@@ -323,7 +327,11 @@ public class StoryDialogScreen extends Screen {
             textFullyVisible = true;
             return true;
         }
-        if (textFullyVisible && type != 1 && type != 4) {
+        if (textFullyVisible && type != 1) {
+            if (type == 4) {
+                Minecraft.getInstance().setScreen(null);
+                return true;
+            }
             ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
             return true;
         }
@@ -383,20 +391,12 @@ public class StoryDialogScreen extends Screen {
             }
 
             if (type == 4) {
-                // END 类型：显示结束语后 3 秒自动关闭
+                // END 类型：显示结束语，点击后关闭（不推进剧情）
                 if (client.screen instanceof StoryDialogScreen existing) {
-                    existing.updateContent(0, "", "", text, null, "");
+                    existing.updateContent(4, "", "", text, null, "");
                 } else {
-                    client.setScreen(new StoryDialogScreen(0, "", "", text, null, ""));
+                    client.setScreen(new StoryDialogScreen(4, "", "", text, null, ""));
                 }
-                new Thread(() -> {
-                    try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-                    client.execute(() -> {
-                        if (client.screen instanceof StoryDialogScreen) {
-                            client.setScreen(null);
-                        }
-                    });
-                }).start();
                 return;
             }
 
