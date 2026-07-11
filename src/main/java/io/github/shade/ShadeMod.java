@@ -6,6 +6,7 @@ import io.github.shade.story.StoryCommand;
 import io.github.shade.story.StoryEventHandler;
 import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.story.adapter.CampAdapter;
+import io.github.shade.story.aigen.AiCommand;
 import io.github.shade.story.network.StoryPayloads;
 import io.github.shade.worldlevel.WorldLevelCommand;
 import net.fabricmc.api.ModInitializer;
@@ -34,6 +35,7 @@ public class ShadeMod implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             CampCommand.register(dispatcher);
             StoryCommand.register(dispatcher);
+            AiCommand.register(dispatcher);
             WorldLevelCommand.register(dispatcher);
         });
 
