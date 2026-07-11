@@ -624,7 +624,7 @@ public class CampManager {
 
         int worldLevel = WorldLevel.getLevel(world);
         if (worldLevel > 0) {
-            ShadeMod.LOGGER.info("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.formatLevel(worldLevel));
+            ShadeMod.LOGGER.info("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.getName(worldLevel));
         }
 
         for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {
@@ -732,7 +732,7 @@ public class CampManager {
         camp.clearActiveEntities();
 
         // 按怪物数量分等级生成宝箱
-        CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount());
+        CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount(), WorldLevel.getLevel(world));
         CampRewardHandler.spawnRewardChest(world, camp, tier);
 
         save();

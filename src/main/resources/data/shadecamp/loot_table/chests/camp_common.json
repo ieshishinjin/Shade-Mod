@@ -1,23 +1,17 @@
 {
   "type": "minecraft:chest",
-  "pools": [
-    {
-      "bonus_rolls": 0.0,
-      "rolls": {
-        "type": "minecraft:uniform",
-        "min": 2.0,
-        "max": 4.0
-      },
-      "entries": [
-        { "type": "minecraft:item", "name": "minecraft:bone",           "weight": 15, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 5.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:coal",           "weight": 12, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 6.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:iron_nugget",    "weight": 10, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3.0, "max": 8.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:arrow",          "weight": 10, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 6.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:rotten_flesh",   "weight": 12, "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2.0, "max": 5.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:wheat",          "weight": 8,  "functions": [ { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1.0, "max": 3.0 }, "add": false } ] },
-        { "type": "minecraft:item", "name": "minecraft:iron_ingot",     "weight": 4 }
-      ]
-    }
-  ],
+  "pools": [{
+    "bonus_rolls": 0.0,
+    "rolls": { "type": "minecraft:uniform", "min": 3.0, "max": 6.0 },
+    "entries": [
+      { "type": "minecraft:item", "name": "minecraft:iron_ingot",     "weight": 15, "functions":[{"function":"minecraft:set_count","count":{"type":"minecraft:uniform","min":2.0,"max":5.0},"add":false}] },
+      { "type": "minecraft:item", "name": "minecraft:gold_ingot",     "weight": 8,  "functions":[{"function":"minecraft:set_count","count":{"type":"minecraft:uniform","min":1.0,"max":3.0},"add":false}] },
+      { "type": "minecraft:item", "name": "minecraft:emerald",        "weight": 6 },
+      { "type": "minecraft:item", "name": "minecraft:golden_apple",   "weight": 4 },
+      { "type": "minecraft:item", "name": "minecraft:experience_bottle","weight": 6, "functions":[{"function":"minecraft:set_count","count":{"type":"minecraft:uniform","min":1.0,"max":3.0},"add":false}] },
+      { "type": "minecraft:item", "name": "minecraft:iron_sword",     "weight": 4 },
+      { "type": "minecraft:item", "name": "minecraft:arrow",         "weight": 10, "functions":[{"function":"minecraft:set_count","count":{"type":"minecraft:uniform","min":4.0,"max":10.0},"add":false}] }
+    ]
+  }],
   "random_sequence": "shadecamp:chests/camp_common"
 }

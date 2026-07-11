@@ -97,6 +97,11 @@ public class CampEventHandler {
                     if (rule.get()) rule.set(false, server);
                 }
 
+                // 每秒更新 TAB 头部显示世界等级
+                if (level.getGameTime() % 20 == 0) {
+                    io.github.shade.worldlevel.WorldLevel.updateTabHeader(server, level);
+                }
+
                 CampManager campManager = CampManager.getInstance(level);
                 int before = campManager.getCampCount();
                 campManager.tick();

@@ -45,11 +45,13 @@ public class CampRewardHandler {
             this.particle = p; this.sound = s; this.particleCount = pc;
         }
 
-        public static ChestTier forMobCount(int count) {
+        public static ChestTier forMobCount(int count, int worldLevel) {
+            int tierIndex = 0;
             for (ChestTier t : values()) {
-                if (count >= t.minMobs && count <= t.maxMobs) return t;
+                if (count >= t.minMobs) tierIndex = t.ordinal();
             }
-            return COMMON;
+            tierIndex = Math.min(tierIndex + worldLevel / 2, values().length - 1);
+            return values()[tierIndex];
         }
     }
 
@@ -104,7 +106,7 @@ public class CampRewardHandler {
 
     /** 旧版方法：向后兼容 */
     public static void spawnRewardChest(ServerLevel world, Camp camp) {
-        spawnRewardChest(world, camp, ChestTier.forMobCount(camp.getTotalMobCount()));
+        spawnRewardChest(world, camp, ChestTier.forMobCount(camp.getTotalMobCount(), 0));
     }
 
     public static void playClearEffects(ServerLevel world, Vec3 pos) {

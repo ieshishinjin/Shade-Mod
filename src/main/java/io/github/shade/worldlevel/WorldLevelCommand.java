@@ -23,13 +23,13 @@ public class WorldLevelCommand {
     private static int execute(CommandContext<CommandSourceStack> ctx) {
         ServerLevel world = ctx.getSource().getLevel();
         int wl = WorldLevel.getLevel(world);
-        int maxP = WorldLevel.getMaxPlayerLevel(world);
+        int maxP = WorldLevel.getMaxLevel(world);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "§d✦ 世界等级: WL." + wl + "  §7(最高玩家等级: " + maxP + ")"
         ), false);
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "  §7怪物血量: §f+" + (wl * 20) + "%  §7宝箱品质: §f" + WorldLevel.chestTierName(wl)
+                "  §7怪物血量: §f+" + (wl * 20) + "%  §7宝箱品质: §f" + WorldLevel.getName(wl)
         ), false);
         return 1;
     }
