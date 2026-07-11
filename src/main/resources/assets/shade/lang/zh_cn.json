@@ -1,0 +1,12 @@
+{
+  "shade.story.script.notfound": "§c剧情脚本 '%s' 不存在！",
+  "shade.story.start.success": "§a开始剧情: %s",
+  "shade.story.start.failed": "§c无法开始剧情 '%s'",
+  "shade.story.status.none": "§7当前没有正在进行的剧情",
+  "shade.story.advance.noactive": "§c你没有正在进行的剧情，使用 /story start <脚本名> 开始",
+  "shade.story.end": "§e剧情结束",
+  "shade.story.reset.success": "§a剧情进度已重置",
+  "shade.story.reload.success": "§a剧情脚本已重新加载",
+  "shade.story.list.none": "§7没有可用的剧情脚本",
+  "shade.story.list.header": "§6=== 可用剧情脚本 (§e%d§6) ==="
+}

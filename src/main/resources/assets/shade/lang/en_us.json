@@ -1,0 +1,12 @@
+{
+  "shade.story.script.notfound": "§cStory script '%s' not found!",
+  "shade.story.start.success": "§aStarting story: %s",
+  "shade.story.start.failed": "§cFailed to start story '%s'",
+  "shade.story.status.none": "§7No active story",
+  "shade.story.advance.noactive": "§cYou have no active story. Use /story start <script> to begin.",
+  "shade.story.end": "§eStory ended",
+  "shade.story.reset.success": "§aStory progress reset",
+  "shade.story.reload.success": "§aStory scripts reloaded",
+  "shade.story.list.none": "§7No story scripts available",
+  "shade.story.list.header": "§6=== Available Stories (§e%d§6) ==="
+}

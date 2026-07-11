@@ -2,6 +2,9 @@ package io.github.shade;
 
 import io.github.shade.camp.CampCommand;
 import io.github.shade.camp.CampEventHandler;
+import io.github.shade.story.StoryCommand;
+import io.github.shade.story.StoryEventHandler;
+import io.github.shade.story.network.StoryPayloads;
 import io.github.shade.worldlevel.WorldLevelCommand;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -21,8 +24,11 @@ public class ShadeMod implements ModInitializer {
         LOGGER.info("Shade 模组初始化...");
 
         CampEventHandler.register();
+        StoryEventHandler.register();
+        StoryPayloads.register();
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             CampCommand.register(dispatcher);
+            StoryCommand.register(dispatcher);
             WorldLevelCommand.register(dispatcher);
         });
 

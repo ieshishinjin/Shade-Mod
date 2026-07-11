@@ -1,0 +1,185 @@
+{
+    "id": "chapter1_wake_up",
+    "title": "第一章：苏醒",
+    "start_node": "start",
+    "nodes": {
+        "start": {
+            "type": "DIALOG",
+            "speaker": "???",
+            "text": "你缓缓睁开眼睛，发现自己躺在一张陌生的床上……\n头顶是陌生的天花板，空气中弥漫着草木和尘土的气息。",
+            "next": "who_are_you"
+        },
+        "who_are_you": {
+            "type": "DIALOG",
+            "speaker": "???",
+            "text": "「你终于醒了。感觉怎么样？」\n一个温和的声音从旁边传来。你转过头，看到一个披着斗篷的人坐在床边。",
+            "next": "intro_choice"
+        },
+        "intro_choice": {
+            "type": "CHOICE",
+            "speaker": "你",
+            "text": "你要怎么回应？",
+            "options": [
+                {
+                    "label": "「这是哪里？你是谁？」",
+                    "next": "npc_intro",
+                    "flags": {"asked_about_place": true}
+                },
+                {
+                    "label": "（保持沉默，先观察四周）",
+                    "next": "silent_approach",
+                    "flags": {"chose_silent": true}
+                }
+            ]
+        },
+        "silent_approach": {
+            "type": "DIALOG",
+            "speaker": "神秘人",
+            "text": "「不必紧张，这里是晨曦营地。我是这里的向导，你可以叫我阿卡娅。」\n她微笑着说道，似乎并不在意你的沉默。",
+            "next": "npc_intro"
+        },
+        "npc_intro": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/akaya.png",
+            "text": "「这里是晨曦营地——这片废土上最后的庇护所之一。三天前，我们在营地外围发现了你。」\n「你受了很重的伤，我们差点以为救不活了。」",
+            "next": "world_explain"
+        },
+        "world_explain": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「现在的世界和你记忆中可能不太一样了。四处都是危险的怪物营地，想活下去就必须战斗。」\n「不过别担心，我们会帮你慢慢适应的。」",
+            "next": "first_quest_offer"
+        },
+        "first_quest_offer": {
+            "type": "CHOICE",
+            "speaker": "阿卡娅",
+            "text": "「在你养伤的这几天，营地西边的哨站好像被掠夺者占领了。\n你愿意帮我们一个忙吗？当然，不会让你白干的。」",
+            "options": [
+                {
+                    "label": "「乐意效劳。」",
+                    "next": "quest_accept",
+                    "flags": {"accepted_first_quest": true}
+                },
+                {
+                    "label": "「我需要再休息一下。」",
+                    "next": "quest_decline",
+                    "flags": {"declined_first_quest": true}
+                }
+            ]
+        },
+        "quest_accept": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「太好了！我就知道你是个靠得住的人。」\n她站起身，从桌上拿起一张泛黄的地图。",
+            "next": "quest_start_node"
+        },
+        "quest_start_node": {
+            "type": "QUEST_START",
+            "speaker": "阿卡娅",
+            "text": "「西边哨站就在营地以西大约四百米的位置。听说那里盘踞着一伙掠夺者。」\n「你不需要独自清理整个据点——侦察清楚情况就回来报告。如果顺手解决掉几个，那就更好了。」",
+            "quest": {
+                "quest_id": "recon_west_outpost",
+                "quest_name": "§6侦察西边哨站",
+                "quest_description": "前往营地以西的哨站侦察情况。如果可能，清理掉那里的掠夺者。",
+                "objectives": [
+                    {
+                        "type": "REACH_LOCATION",
+                        "targetId": "west_outpost",
+                        "count": 1,
+                        "displayText": "到达西边哨站"
+                    },
+                    {
+                        "type": "KILL_MOB",
+                        "targetId": "minecraft:pillager",
+                        "count": 3,
+                        "displayText": "击杀掠夺者 × 3"
+                    }
+                ],
+                "rewards": {
+                    "exp": 50,
+                    "items": ["minecraft:iron_ingot:3", "minecraft:bread:5"],
+                    "flags": {"completed_recon": "true"}
+                },
+                "on_quest_complete": "quest_complete_dialog",
+                "on_quest_fail": "quest_fail_dialog"
+            },
+            "next": "quest_hint"
+        },
+        "quest_hint": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「出发前可以去营地中间的木箱里拿些补给。路上小心——虽然白天的怪物不会主动攻击，但靠近他们的据点就另当别论了。」",
+            "next": "first_lesson"
+        },
+        "first_lesson": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「对了，记住这一点：在这个世界，实力就是一切。当你变得更强大时，整个世界都会变得更加危险——但同时，你也能找到更好的宝物。」\n她指了指你腰间那把破旧的铁剑。",
+            "next": "camp_tutorial_cond"
+        },
+        "camp_tutorial_cond": {
+            "type": "CONDITION",
+            "condition": {
+                "type": "FLAG_CHECK",
+                "targetId": "chose_silent",
+                "value": 1,
+                "operator": "==",
+                "nextIfTrue": "camp_tutorial_silent",
+                "nextIfFalse": "camp_tutorial_normal"
+            }
+        },
+        "camp_tutorial_silent": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「你还真是个寡言的人呢……不过没关系，行动胜于言语，对吧？」\n她眨了眨眼睛，递给你一个背包。",
+            "next": "end_chapter1"
+        },
+        "camp_tutorial_normal": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「好了，该说的都说了。天色不早了，如果你想出发，现在正是时候。」\n她把背包递给你，站起身推开了木门。门外的夕阳洒进屋内，温暖而刺眼。",
+            "next": "end_chapter1"
+        },
+        "end_chapter1": {
+            "type": "END",
+            "text": "你走出了小屋，踏入了这片陌生而危险的世界。\n前方的路还很长，但至少，你不再是一个人了。"
+        },
+        "quest_decline": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「当然可以，你的伤确实还没完全好。好好休息吧，等你想出发了，随时可以来找我。」",
+            "next": "rest_end"
+        },
+        "rest_end": {
+            "type": "END",
+            "text": "你决定再休息一天。窗外传来营地的嘈杂声，你闭上眼睛，思绪万千。\n（你可以稍后使用 §e/story start chapter1_wake_up§r 重新开始剧情）"
+        },
+        "quest_complete_dialog": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「你回来了！我听说西边哨站的掠夺者已经被清理干净了——干得漂亮！」\n她拍了拍你的肩膀，笑容灿烂。",
+            "next": "quest_complete_reward_dialog"
+        },
+        "quest_complete_reward_dialog": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「这是承诺的报酬，收下吧。另外……营地东边好像也有点动静，等你准备好了，或许可以去看看。」\n她意味深长地笑了笑。",
+            "next": "chapter1_complete"
+        },
+        "chapter1_complete": {
+            "type": "END",
+            "text": "§e§l第一章：苏醒 · 完\n\n你成功完成了第一个任务，在这个陌生的世界迈出了第一步。\n新的冒险在等待着你……"
+        },
+        "quest_fail_dialog": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "text": "「你回来了……听说西边哨站的攻势比预想中猛烈。没受伤吧？」\n她的语气中满是关切。「没关系，我们可以从长计议。」",
+            "next": "quest_fail_end"
+        },
+        "quest_fail_end": {
+            "type": "END",
+            "text": "任务虽然暂时失败了，但你还活着——这本身就是一种胜利。\n养精蓄锐，下次一定能成功。"
+        }
+    }
+}
