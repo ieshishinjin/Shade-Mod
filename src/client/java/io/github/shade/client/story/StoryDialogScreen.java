@@ -14,27 +14,6 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Galgame 风格对话框屏幕
- *
- * 显示 NPC 立绘、说话人名称、打字机效果对话文本、
- * 选项按钮等。替换 Phase 1 的聊天消息显示。
- *
- * 布局：
- * ┌──────────────────────────────────────┐
- * │          (半透明背景遮盖)              │
- * │                                      │
- * │  ┌──────┐  §e§l说话人名称              │
- * │  │立绘  │                            │
- * │  │ 64x64│  对话文本（打字机效果）       │
- * │  └──────┘  ...                       │
- * │                                      │
- * │  ┌──────────────────────────┐        │
- * │  │ 选项 1                   │        │
- * │  ├──────────────────────────┤        │
- * │  │ 选项 2                   │        │
- *  └──────────────────────────────────────┘
- */
 public class StoryDialogScreen extends Screen {
 
     // === 显示数据 ===
@@ -53,11 +32,11 @@ public class StoryDialogScreen extends Screen {
     private boolean textFullyVisible = false;
 
     // === 布局常量 ===
-    private static final int DIALOG_BOX_HEIGHT = 110;
-    private static final int DIALOG_BOX_MARGIN = 20;
-    private static final int PORTRAIT_SIZE = 64;
-    private static final int PORTRAIT_MARGIN = 12;
-    private static final int TEXT_LEFT_MARGIN = 10;
+    private static final int DIALOG_BOX_HEIGHT = 130;
+    private static final int DIALOG_BOX_MARGIN = 16;
+    private static final int PORTRAIT_SIZE = 80;
+    private static final int PORTRAIT_MARGIN = 14;
+    private static final int TEXT_LEFT_MARGIN = 12;
     private static final int OPTION_BUTTON_HEIGHT = 28;
     private static final int OPTION_BUTTON_SPACING = 4;
 
@@ -130,16 +109,16 @@ public class StoryDialogScreen extends Screen {
 
         // 文本区域（立绘右侧）
         int textLeft = portraitLeft + PORTRAIT_SIZE + PORTRAIT_MARGIN;
-        int textTop = dialogTop + PORTRAIT_MARGIN;
+        int textTop = dialogTop + PORTRAIT_MARGIN;           // 与 portraitTop 相同 Y
         int textWidth = dialogRight - textLeft - TEXT_LEFT_MARGIN;
         int textHeight = DIALOG_BOX_HEIGHT - PORTRAIT_MARGIN * 2;
 
-        // 绘制说话人名称
+        // 绘制说话人名称（与头像顶边精准对齐）
         if (speaker != null && !speaker.isEmpty() && type != 2) {
             graphics.drawString(
                     font,
                     "§e§l" + speaker,
-                    textLeft, textTop,
+                    textLeft, portraitTop - 3,
                     SPEAKER_COLOR, false
             );
         }
@@ -149,7 +128,7 @@ public class StoryDialogScreen extends Screen {
 
         // 手动分行（支持 \n 和自动换行）
         List<String> lines = wrapText(displayText, textWidth);
-        int lineY = textTop + (speaker != null && !speaker.isEmpty() && type != 2 ? 14 : 0);
+        int lineY = portraitTop + (speaker != null && !speaker.isEmpty() && type != 2 ? font.lineHeight + 4 : 0);
 
         for (String line : lines) {
             if (lineY + font.lineHeight > dialogBottom - 10) break;
@@ -183,13 +162,13 @@ public class StoryDialogScreen extends Screen {
      */
     private void drawPortrait(GuiGraphics graphics, int x, int y) {
         if (portraitPath != null && !portraitPath.isEmpty()) {
-            // 尝试加载自定义立绘纹理
-            ResourceLocation portraitLocation = ResourceLocation.parse(portraitPath);
             try {
+                // 安全解析路径（无效字符不会崩溃）
+                ResourceLocation portraitLocation = ResourceLocation.parse(portraitPath);
                 graphics.blit(portraitLocation, x, y, 0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE);
                 return;
             } catch (Exception ignored) {
-                // 纹理不存在，回退到占位
+                // 纹理不存在或路径无效，回退到占位
             }
         }
 
@@ -320,8 +299,8 @@ public class StoryDialogScreen extends Screen {
                 }
             }
 
-            // 对话模式且文本已完全显示 → 推进
-            if (textFullyVisible && type != 1) {
+            // 对话模式且文本已完全显示 → 推进（type=4 结束语不推进，自动关闭）
+            if (textFullyVisible && type != 1 && type != 4) {
                 ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
                 return true;
             }
@@ -334,19 +313,22 @@ public class StoryDialogScreen extends Screen {
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // ESC 键(256) → 关闭对话框，不触发 advance
+        if (keyCode == 256) {
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (typing && visibleChars < fullText.length()) {
             visibleChars = fullText.length();
             typing = false;
             textFullyVisible = true;
             return true;
         }
-        if (textFullyVisible && type != 1) {
+        if (textFullyVisible && type != 1 && type != 4) {
             ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
             return true;
         }
         if (type == 1 && textFullyVisible) {
-            // 数字键快速选择
-            if (keyCode >= 49 && keyCode <= 57) { // 1-9
+            if (keyCode >= 49 && keyCode <= 57) {
                 int idx = keyCode - 49;
                 if (options != null && idx < options.size()) {
                     ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.choose(idx));
@@ -358,8 +340,13 @@ public class StoryDialogScreen extends Screen {
     }
 
     @Override
+    public void onClose() {
+        super.onClose();
+    }
+
+    @Override
     public boolean shouldCloseOnEsc() {
-        return false; // ESC 不关闭对话框
+        return true;
     }
 
     @Override
@@ -389,10 +376,27 @@ public class StoryDialogScreen extends Screen {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
             if (type == 3) {
-                // 关闭对话框
                 if (client.screen instanceof StoryDialogScreen) {
                     client.setScreen(null);
                 }
+                return;
+            }
+
+            if (type == 4) {
+                // END 类型：显示结束语后 3 秒自动关闭
+                if (client.screen instanceof StoryDialogScreen existing) {
+                    existing.updateContent(0, "", "", text, null, "");
+                } else {
+                    client.setScreen(new StoryDialogScreen(0, "", "", text, null, ""));
+                }
+                new Thread(() -> {
+                    try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+                    client.execute(() -> {
+                        if (client.screen instanceof StoryDialogScreen) {
+                            client.setScreen(null);
+                        }
+                    });
+                }).start();
                 return;
             }
 

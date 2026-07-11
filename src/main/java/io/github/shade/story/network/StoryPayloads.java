@@ -107,6 +107,11 @@ public class StoryPayloads {
         public static StoryDialogPayload close() {
             return new StoryDialogPayload(3, "", "", "", null, "");
         }
+
+        /** 结束语（客户端显示 3 秒后自动关闭） */
+        public static StoryDialogPayload ending(String text, String title) {
+            return new StoryDialogPayload(4, "", "", text, null, title);
+        }
     }
 
     // ============================================================
@@ -232,7 +237,7 @@ public class StoryPayloads {
             case END -> {
                 if (node.getText() != null && !node.getText().isEmpty()) {
                     ServerPlayNetworking.send(player,
-                            StoryDialogPayload.openDialog("", "", node.getText(), title));
+                            StoryDialogPayload.ending(node.getText(), title));
                 }
             }
             default -> {}
