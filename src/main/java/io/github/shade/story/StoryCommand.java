@@ -10,6 +10,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.shade.story.model.StoryChoice;
 import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.model.StoryScript;
+import io.github.shade.story.network.StoryPayloads;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.quest.RuntimeQuest;
 import io.github.shade.story.trigger.StoryTrigger;
@@ -141,7 +142,8 @@ public class StoryCommand {
             return 0;
         }
 
-        // Phase 1 使用聊天消息显示，Phase 2 替换为 GUI 包
+        // 发送 GUI 包 + 聊天回退
+        StoryPayloads.sendNodeToClient(player, engine, startNode);
         displayNode(player, startNode);
         ctx.getSource().sendSuccess(() ->
                 Component.translatable("shade.story.start.success", script.getTitle()), false);
@@ -213,11 +215,13 @@ public class StoryCommand {
         StoryNode nextNode = engine.advance(player);
 
         if (nextNode == null) {
+            StoryPayloads.sendNodeToClient(player, engine, null);
             ctx.getSource().sendSuccess(() ->
                     Component.translatable("shade.story.end"), false);
             return 1;
         }
 
+        StoryPayloads.sendNodeToClient(player, engine, nextNode);
         displayNode(player, nextNode);
         return 1;
     }
@@ -235,11 +239,13 @@ public class StoryCommand {
 
         StoryNode nextNode = engine.choose(player, index);
         if (nextNode == null) {
+            StoryPayloads.sendNodeToClient(player, engine, null);
             ctx.getSource().sendSuccess(() ->
                     Component.translatable("shade.story.end"), false);
             return 1;
         }
 
+        StoryPayloads.sendNodeToClient(player, engine, nextNode);
         displayNode(player, nextNode);
         return 1;
     }

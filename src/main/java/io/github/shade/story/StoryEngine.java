@@ -66,46 +66,89 @@ public class StoryEngine {
     // ==================== 脚本加载 ====================
 
     /**
-     * 从 assets/shade/story/ 目录加载所有 JSON 脚本
-     * 支持热加载：开发时修改脚本后调用此方法即可生效
+     * 加载所有剧情脚本
+     *
+     * 从 classpath assets/shade/story/*.json 加载（最可靠方式），
+     * 热加载时调用此方法即可重新加载。
      */
     public void loadScripts() {
         scripts.clear();
         int loaded = 0;
 
-        // 使用服务器 ResourceManager 扫描 shade:story/*.json
-        String folder = "story";
-        var resourceManager = world.getServer().getResourceManager();
-        var resourceIds = resourceManager.listResources(folder,
-                path -> path.getPath().endsWith(".json") && path.getNamespace().equals("shade"));
+        // 从 classpath 扫描加载
+        try {
+            var classLoader = getClass().getClassLoader();
+            // 已知脚本列表（如新增脚本，在此添加）
+            String[] knownScripts = {"chapter1_wake_up"};
 
-        for (var entry : resourceIds.entrySet()) {
-            ResourceLocation location = entry.getKey();
-            try (var input = entry.getValue().open();
-                 var reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-
-                StoryScript script = GSON.fromJson(reader, StoryScript.class);
-                if (script != null && script.getNodes() != null) {
-                    // 如果脚本没有显式设置 id，从文件名推断
-                    if (script.getId() == null || script.getId().isBlank()) {
-                        String path = location.getPath();
-                        String fileName = path.substring(path.lastIndexOf('/') + 1);
-                        script.setId(fileName.replace(".json", ""));
-                    }
-                    scripts.put(script.getId(), script);
-                    loaded++;
-                    ShadeMod.LOGGER.debug("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
+            // 尝试自动发现更多脚本
+            var enumUrls = classLoader.getResources("assets/shade/story/");
+            while (enumUrls.hasMoreElements()) {
+                java.net.URL url = enumUrls.nextElement();
+                if ("file".equals(url.getProtocol())) {
+                    // 开发环境：扫描目录
+                    try {
+                        java.io.File dir = new java.io.File(url.toURI());
+                        java.io.File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
+                        if (files != null) {
+                            for (java.io.File f : files) {
+                                try (var reader = new java.io.FileReader(f, java.nio.charset.StandardCharsets.UTF_8)) {
+                                    if (loadFromReader(f.getName(), reader)) loaded++;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
                 }
-            } catch (IOException | JsonSyntaxException e) {
-                ShadeMod.LOGGER.error("[story] 加载脚本失败: {}", location, e);
             }
+
+            // 如果自动发现失败，尝试已知脚本名
+            if (loaded == 0) {
+                for (String scriptName : knownScripts) {
+                    String resourcePath = "assets/shade/story/" + scriptName + ".json";
+                    try (var input = classLoader.getResourceAsStream(resourcePath)) {
+                        if (input != null) {
+                            try (var reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
+                                if (loadFromReader(scriptName + ".json", reader)) loaded++;
+                            }
+                        } else {
+                            ShadeMod.LOGGER.warn("[story] 未找到脚本资源: {}", resourcePath);
+                        }
+                    } catch (IOException e) {
+                        ShadeMod.LOGGER.error("[story] 加载失败: {}", resourcePath, e);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            ShadeMod.LOGGER.error("[story] classpath 扫描失败", e);
         }
 
         ShadeMod.LOGGER.info("[story] 已加载 {} 个剧情脚本", loaded);
     }
 
     /**
-     * 按 ResourceLocation 直接加载指定脚本（用于调试/命令）
+     * 从 Reader 解析脚本并存储
+     */
+    private boolean loadFromReader(String fileName, Reader reader) {
+        try {
+            StoryScript script = GSON.fromJson(reader, StoryScript.class);
+            if (script != null && script.getNodes() != null) {
+                if (script.getId() == null || script.getId().isBlank()) {
+                    script.setId(fileName.replace(".json", ""));
+                }
+                scripts.put(script.getId(), script);
+                ShadeMod.LOGGER.info("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
+                return true;
+            } else {
+                ShadeMod.LOGGER.warn("[story] 脚本格式无效: {}", fileName);
+            }
+        } catch (JsonSyntaxException e) {
+            ShadeMod.LOGGER.error("[story] JSON 解析失败: {}", fileName, e);
+        }
+        return false;
+    }
+
+    /**
+     * 按 ResourceLocation 直接加载指定脚本
      */
     public StoryScript loadScript(ResourceLocation location) {
         try (var input = world.getServer().getResourceManager().open(location);
