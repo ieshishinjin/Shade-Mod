@@ -261,6 +261,23 @@ public class StoryEngine {
     }
 
     /**
+     * 获取玩家当前故事状态（供 AI 生成器等模块使用）
+     */
+    public PlayerStoryState getActiveState(ServerPlayer player) {
+        return activeStories.get(player.getUUID());
+    }
+
+    /**
+     * 设置玩家当前节点（供 AI 生成器注入后使用）
+     */
+    public void setCurrentNode(ServerPlayer player, String nodeId) {
+        PlayerStoryState state = activeStories.get(player.getUUID());
+        if (state != null) {
+            state.currentNode = nodeId;
+        }
+    }
+
+    /**
      * 获取玩家当前的展示节点
      */
     public StoryNode getCurrentNode(ServerPlayer player) {
@@ -291,6 +308,15 @@ public class StoryEngine {
     // ==================== 内部方法 ====================
 
     /**
+     * 解析下一个展示节点（供 AI 生成器使用）
+     */
+    public StoryNode resolveAndGetDisplayNode(ServerPlayer player) {
+        PlayerStoryState state = activeStories.get(player.getUUID());
+        if (state == null) return null;
+        return resolveNextDisplayNode(player, state);
+    }
+
+    /**
      * 从当前节点开始，自动跳过 CONDITION 和 EVENT 等非交互节点，
      * 返回第一个需要玩家交互的节点（DIALOG / CHOICE / QUEST_START / END）
      *
@@ -318,6 +344,16 @@ public class StoryEngine {
                     }
                     state.currentNode = nextNode;
                     continue;
+
+                case AI_GENERATE:
+                    // AI 生成节点 — 异步触发 AI 生成
+                    // 向玩家发送生成中提示
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                            "§e✦ AI 正在生成剧情..."));
+                    // 异步触发 AI 生成（通过 AiCommand 或自动流程）
+                    // 引擎暂停，等待 AI 生成结果注入后继续
+                    ShadeMod.LOGGER.info("[story] 遇到 AI_GENERATE 节点，启动 AI 生成");
+                    return node; // 返回 AI_GENERATE 节点让调用方处理
 
                 case EVENT:
                     // 自动执行事件并继续

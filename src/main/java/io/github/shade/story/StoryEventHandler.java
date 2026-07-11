@@ -2,6 +2,7 @@ package io.github.shade.story;
 
 import io.github.shade.ShadeMod;
 import io.github.shade.story.adapter.AdapterRegistry;
+import io.github.shade.story.aigen.AiConfig;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.trigger.TriggerManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
@@ -94,6 +95,7 @@ public class StoryEventHandler {
         StoryEngine.cleanupAll();
         QuestManager.cleanupAll();
         TriggerManager.cleanupAll();
+        AiConfig.cleanup();
     }
 
     // ==================== 游戏事件 → Quest 进度 ====================
