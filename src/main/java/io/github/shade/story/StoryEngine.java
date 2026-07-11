@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import io.github.shade.ShadeMod;
 import io.github.shade.story.model.*;
+import io.github.shade.story.quest.QuestManager;
+import io.github.shade.story.quest.RuntimeQuest;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -333,9 +335,38 @@ public class StoryEngine {
                     return node;
 
                 case QUEST_START:
+                    // 触发 Quest 开始
+                    if (node.getQuest() != null) {
+                        QuestManager qm = QuestManager.getInstance(world);
+                        RuntimeQuest quest = qm.startQuest(player, node.getQuest());
+                        if (quest != null) {
+                            ShadeMod.LOGGER.info("[story] 玩家 {} 接受 Quest: {}",
+                                    player.getName().getString(), quest.getQuestName());
+                        }
+                    }
+                    return node;
+
                 case QUEST_UPDATE:
+                    // Quest 进度更新提示（显示给玩家）
+                    return node;
+
                 case QUEST_COMPLETE:
-                    // 这些节点需要展示给玩家，同时处理 Quest 逻辑
+                    // 如果有关联 Quest ID，检查是否可强制完成
+                    if (node.getQuest() != null && node.getQuest().getQuestId() != null) {
+                        QuestManager qm = QuestManager.getInstance(world);
+                        if (!qm.isQuestCompleted(player, node.getQuest().getQuestId())) {
+                            // 标记为已完成（用于剧情强制完成）
+                            var quests = qm.getActiveQuests(player);
+                            for (RuntimeQuest q : quests) {
+                                if (q.getQuestId().equals(node.getQuest().getQuestId())) {
+                                    // 强制完成所有 Objective
+                                    for (var obj : q.getObjectives()) {
+                                        obj.setProgress(obj.getTargetCount());
+                                    }
+                                }
+                            }
+                        }
+                    }
                     return node;
 
                 case DIALOG:

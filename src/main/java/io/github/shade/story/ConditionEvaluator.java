@@ -1,15 +1,11 @@
 package io.github.shade.story;
 
+import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.story.model.ConditionData;
 import io.github.shade.story.model.StoryNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
@@ -17,7 +13,7 @@ import java.util.function.BiPredicate;
  * 条件求值器 — 对应设计文档 §4.3 条件系统
  *
  * 评估剧情 CONDITION 节点的条件表达式，返回 true/false。
- * 条件和适配器系统联动（Phase 6），目前提供基础实现 + 扩展点。
+ * 内置条件直接求值，系统条件通过适配器层查询（Phase 6）。
  */
 public class ConditionEvaluator {
 
@@ -30,10 +26,10 @@ public class ConditionEvaluator {
         registerChecker(ConditionData.TYPE_FLAG_CHECK, ConditionEvaluator::checkFlag);
         registerChecker(ConditionData.TYPE_PLAYER_LEVEL, ConditionEvaluator::checkPlayerLevel);
         registerChecker(ConditionData.TYPE_LOCATION, ConditionEvaluator::checkLocation);
-        // 以下条件类型需要适配器系统提供数据（Phase 6），目前为桩实现
-        registerChecker(ConditionData.TYPE_CAMP_STATUS, ConditionEvaluator::checkCampStatusStub);
-        registerChecker(ConditionData.TYPE_ITEM_COUNT, ConditionEvaluator::checkItemCountStub);
-        registerChecker(ConditionData.TYPE_KILL_COUNT, ConditionEvaluator::checkKillCountStub);
+        // 系统条件通过 AdapterRegistry 委托给对应适配器
+        registerChecker(ConditionData.TYPE_CAMP_STATUS, ConditionEvaluator::checkViaAdapter);
+        registerChecker(ConditionData.TYPE_ITEM_COUNT, ConditionEvaluator::checkViaAdapter);
+        registerChecker(ConditionData.TYPE_KILL_COUNT, ConditionEvaluator::checkViaAdapter);
     }
 
     /**
@@ -107,36 +103,21 @@ public class ConditionEvaluator {
         }
     }
 
-    // ==================== 桩实现（Phase 6 替换） ====================
+    // ==================== 系统条件 — 通过适配器求值 ====================
 
     /**
-     * CAMP_STATUS 桩实现 — 检查营地状态
-     * TODO: Phase 6 接入 Camp 适配器后替换
+     * 通用适配器条件检查 — 委托给 AdapterRegistry
+     *
+     * 遍历所有已注册的适配器，找到能处理此条件类型并返回 true 的。
      */
-    private static boolean checkCampStatusStub(ServerPlayer player, ConditionData condition) {
-        // 桩实现：默认返回 false
-        // 实际实现将通过 CampAdapter 查询营地状态
-        return false;
-    }
-
-    /**
-     * ITEM_COUNT 桩实现 — 检查玩家背包物品数量
-     * TODO: Phase 6 接入采集适配器后替换
-     */
-    private static boolean checkItemCountStub(ServerPlayer player, ConditionData condition) {
-        // 桩实现：默认返回 false
-        // 实际实现将检查 player.getInventory() 中指定物品数量
-        return false;
-    }
-
-    /**
-     * KILL_COUNT 桩实现 — 检查玩家击杀数量
-     * TODO: Phase 6 接入战斗适配器后替换
-     */
-    private static boolean checkKillCountStub(ServerPlayer player, ConditionData condition) {
-        // 桩实现：默认返回 false
-        // 实际实现将通过玩家统计信息检查击杀数
-        return false;
+    private static boolean checkViaAdapter(ServerPlayer player, ConditionData condition) {
+        return AdapterRegistry.checkCondition(
+                player,
+                condition.getType(),
+                condition.getTargetId(),
+                condition.getValue(),
+                condition.getOperator()
+        );
     }
 
     // ==================== 工具方法 ====================

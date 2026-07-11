@@ -1,5 +1,6 @@
 
 package io.github.shade.camp;
+import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.worldlevel.WorldLevel;
 
 import com.google.gson.Gson;
@@ -734,6 +735,11 @@ public class CampManager {
         // 按怪物数量分等级生成宝箱
         CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount(), WorldLevel.getLevel(world));
         CampRewardHandler.spawnRewardChest(world, camp, tier);
+
+        // 通知 Quest 系统：该营地已被占领
+        for (ServerPlayer player : getPlayersInRange(camp)) {
+            AdapterRegistry.notifyProgress(player, "OCCUPY_CAMP", camp.getName(), 1);
+        }
 
         save();
     }
