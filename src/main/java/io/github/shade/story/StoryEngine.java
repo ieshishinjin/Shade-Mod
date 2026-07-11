@@ -250,13 +250,13 @@ public class StoryEngine {
         PlayerStoryState state = activeStories.get(player.getUUID());
         if (state != null) {
             // 标记脚本为已完成
-            StoryManager manager = StoryManager.getInstance(world);
-            StoryManager.PlayerProgress progress = manager.getProgress(player);
-            if (progress != null && state.currentScript != null) {
-                // 不重复标记
+            if (state.currentScript != null) {
+                StoryManager manager = StoryManager.getInstance(world);
+                manager.markScriptCompleted(player, state.currentScript);
+                ShadeMod.LOGGER.info("[story] 玩家 {} 完成剧情: {}",
+                        player.getName().getString(), state.currentScript);
             }
             activeStories.remove(player.getUUID());
-            ShadeMod.LOGGER.info("[story] 玩家 {} 结束剧情", player.getName().getString());
         }
     }
 
