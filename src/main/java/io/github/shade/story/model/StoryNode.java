@@ -1,5 +1,6 @@
 package io.github.shade.story.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 /**
@@ -41,9 +42,11 @@ public class StoryNode {
     private String next;
 
     /** Quest 完成后的跳转节点（仅 QUEST_START） */
+    @SerializedName("on_quest_complete")
     private String onQuestComplete;
 
     /** Quest 失败后的跳转节点（仅 QUEST_START） */
+    @SerializedName("on_quest_fail")
     private String onQuestFail;
 
     public StoryNode() {}

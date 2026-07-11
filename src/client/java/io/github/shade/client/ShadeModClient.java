@@ -4,30 +4,42 @@ import io.github.shade.client.story.StoryDialogScreen;
 import io.github.shade.client.story.StoryQuestOverlay;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.KeyMapping;
+import org.lwjgl.glfw.GLFW;
 
 public class ShadeModClient implements ClientModInitializer {
+
+    private static KeyMapping resumeKey;
+
     @Override
     public void onInitializeClient() {
-        // 注册客户端网络包接收器 — 处理服务器发来的对话框内容
         registerClientReceivers();
+        registerKeybindings();
 
-        // 注册 HUD 叠加层 — 显示 Quest 追踪
         HudRenderCallback.EVENT.register((graphics, deltaTracker) -> {
             StoryQuestOverlay.getInstance().render(graphics);
         });
+    }
 
-        net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            // 空执行确保客户端初始化完成
+    private void registerKeybindings() {
+        resumeKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.shade.resume",
+                GLFW.GLFW_KEY_R,
+                "category.shade"
+        ));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (resumeKey.consumeClick()) {
+                ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.resume());
+            }
         });
     }
 
-    /**
-     * 注册客户端接收器
-     */
     private void registerClientReceivers() {
-        // 接收对话框内容包
         ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.StoryDialogPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
@@ -41,7 +53,5 @@ public class ShadeModClient implements ClientModInitializer {
                         );
                     });
                 });
-
-        // 未来可在此注册更多客户端包接收器
     }
 }

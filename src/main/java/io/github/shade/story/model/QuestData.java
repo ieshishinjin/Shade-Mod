@@ -1,5 +1,6 @@
 package io.github.shade.story.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 /**
@@ -11,12 +12,15 @@ import java.util.List;
 public class QuestData {
 
     /** Quest 唯一标识 */
+    @SerializedName("quest_id")
     private String questId;
 
     /** Quest 显示名称 */
+    @SerializedName("quest_name")
     private String questName;
 
     /** Quest 描述文本 */
+    @SerializedName("quest_description")
     private String questDescription;
 
     /** Objective 列表（可跨多个系统） */

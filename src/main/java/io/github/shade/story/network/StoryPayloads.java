@@ -142,6 +142,11 @@ public class StoryPayloads {
         public static StoryActionPayload choose(int index) {
             return new StoryActionPayload(1, index);
         }
+
+        /** 重新打开当前节点的 GUI（快捷键用） */
+        public static StoryActionPayload resume() {
+            return new StoryActionPayload(2, -1);
+        }
     }
 
     // ============================================================
@@ -162,6 +167,16 @@ public class StoryPayloads {
 
     private static void handlePlayerAction(ServerPlayer player, StoryActionPayload payload) {
         StoryEngine engine = StoryEngine.getInstance(player.serverLevel());
+
+        // Action 2 = 重新打开 GUI（快捷键 resume）
+        if (payload.action == 2) {
+            if (engine.isInStory(player)) {
+                StoryNode node = engine.getCurrentNode(player);
+                sendNodeToClient(player, engine, node);
+            }
+            return;
+        }
+
         if (!engine.isInStory(player)) return;
 
         StoryNode nextNode;

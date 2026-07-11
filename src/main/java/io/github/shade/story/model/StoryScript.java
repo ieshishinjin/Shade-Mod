@@ -1,5 +1,6 @@
 package io.github.shade.story.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.Map;
 
 /**
@@ -17,6 +18,7 @@ public class StoryScript {
     private String title;
 
     /** 起始节点 ID */
+    @SerializedName("start_node")
     private String startNode;
 
     /** 节点映射：节点 ID → 节点数据 */
