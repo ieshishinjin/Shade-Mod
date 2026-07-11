@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import io.github.shade.ShadeMod;
 import io.github.shade.story.model.*;
+import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.quest.RuntimeQuest;
 import net.minecraft.resources.ResourceLocation;
@@ -249,10 +250,12 @@ public class StoryEngine {
     public void endStory(ServerPlayer player) {
         PlayerStoryState state = activeStories.get(player.getUUID());
         if (state != null) {
-            // 标记脚本为已完成
             if (state.currentScript != null) {
+                // 标记脚本为已完成
                 StoryManager manager = StoryManager.getInstance(world);
                 manager.markScriptCompleted(player, state.currentScript);
+                // 自动解锁画廊结局
+                GalleryManager.getInstance(world).unlockByScript(player, state.currentScript);
                 ShadeMod.LOGGER.info("[story] 玩家 {} 完成剧情: {}",
                         player.getName().getString(), state.currentScript);
             }

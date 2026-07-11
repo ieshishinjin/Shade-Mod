@@ -43,6 +43,9 @@ public class TriggerManager {
     /** 每个玩家已触发的触发器（防重复） */
     private final Map<UUID, Set<String>> firedTriggers = new ConcurrentHashMap<>();
 
+    /** 每个玩家物品快照（用于检测拾取） */
+    private final Map<UUID, Set<String>> lastInventorySnapshots = new ConcurrentHashMap<>();
+
     private int tickCounter = 0;
 
     private TriggerManager(ServerLevel world) {
@@ -128,7 +131,7 @@ public class TriggerManager {
     // ==================== Tick 检测 ====================
 
     /**
-     * 每 tick 调用 — 检测区域进入和触发条件
+     * 每 tick 调用 — 检测区域进入和物品拾取
      */
     public void tick() {
         tickCounter++;
@@ -141,15 +144,44 @@ public class TriggerManager {
             int px = player.blockPosition().getX();
             int pz = player.blockPosition().getZ();
 
+            // 区域触发检测
             for (StoryTrigger trigger : triggers.values()) {
                 if (!"ZONE_ENTER".equals(trigger.getType())) continue;
                 if (hasFired(player, trigger)) continue;
-
                 if (trigger.isInZone(px, pz)) {
                     fireTrigger(player, trigger);
                 }
             }
+
+            // 物品拾取检测（通过比较背包快照）
+            checkInventoryForPickup(player);
         }
+    }
+
+    /**
+     * 检测玩家背包中新获得的物品 → 触发物品拾取触发器
+     */
+    private void checkInventoryForPickup(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        Set<String> currentItems = new java.util.HashSet<>();
+        for (var stack : player.getInventory().items) {
+            if (!stack.isEmpty()) {
+                String id = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .getKey(stack.getItem()).toString();
+                currentItems.add(id);
+            }
+        }
+
+        Set<String> lastItems = lastInventorySnapshots.get(uuid);
+        if (lastItems != null) {
+            for (String itemId : currentItems) {
+                if (!lastItems.contains(itemId)) {
+                    checkItemPickup(player, itemId);
+                }
+            }
+        }
+
+        lastInventorySnapshots.put(uuid, currentItems);
     }
 
     // ==================== 事件触发 ====================

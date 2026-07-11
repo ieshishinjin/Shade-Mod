@@ -26,7 +26,7 @@ public class FreeAiProviders {
                         "智谱 AI",
                         "https://open.bigmodel.cn/api/paas/v4/chat/completions",
                         "glm-4-flash",
-                        "✅ 完全免费",
+                        "完全免费",
                         "GLM-4-Flash 模型完全免费调用，无需付费",
                         "https://open.bigmodel.cn/",
                         "注册后进入 API 密钥页面创建 API key",
@@ -37,7 +37,7 @@ public class FreeAiProviders {
                         "讯飞星火",
                         "https://spark-api-open.xf-yun.com/v1/chat/completions",
                         "lite",
-                        "✅ 完全免费",
+                        "完全免费",
                         "Lite 模型完全免费，无限制调用",
                         "https://xinghuo.xfyun.cn/",
                         "注册后创建应用，获取 app_id 和 api_key",
@@ -48,7 +48,7 @@ public class FreeAiProviders {
                         "DeepSeek",
                         "https://api.deepseek.com/v1/chat/completions",
                         "deepseek-chat",
-                        "💰 新用户赠额",
+                        "新用户赠额",
                         "新用户注册赠送 500 万 tokens（约 5 元），之后按量计费：输入 0.5元/百万tokens，输出 2元/百万tokens",
                         "https://platform.deepseek.com/",
                         "注册后在 API Keys 页面创建 key",
@@ -59,7 +59,7 @@ public class FreeAiProviders {
                         "Mistral AI",
                         "https://api.mistral.ai/v1/chat/completions",
                         "mistral-tiny",
-                        "💰 免费额度",
+                        "免费额度",
                         "每月约 10 亿 tokens 免费额度，无需绑定信用卡。超出后按量计费",
                         "https://console.mistral.ai/",
                         "注册后在 API Keys 页面创建 key",
@@ -70,7 +70,7 @@ public class FreeAiProviders {
                         "Groq",
                         "https://api.groq.com/openai/v1/chat/completions",
                         "llama3-70b-8192",
-                        "💰 免费额度",
+                        "免费额度",
                         "免费层提供速率限制（约 30请求/分钟），推理速度极快。适合开发和测试",
                         "https://console.groq.com/",
                         "注册后在 API Keys 页面创建 key",
@@ -81,7 +81,7 @@ public class FreeAiProviders {
                         "Hugging Face",
                         "https://api-inference.huggingface.co/v1/chat/completions",
                         "microsoft/DialoGPT-medium",
-                        "💰 免费额度",
+                        "免费额度",
                         "免费层每月 50 万 tokens。可选模型：Qwen2.5-72B、Llama-3.1-70B 等",
                         "https://huggingface.co/settings/tokens",
                         "注册后在 Settings → Access Tokens 创建 token",
@@ -107,7 +107,7 @@ public class FreeAiProviders {
      * @param name              显示名称（中文）
      * @param apiEndpoint       API 完整地址
      * @param modelName         推荐模型名
-     * @param freeTag           免费标签文字（如 "✅ 完全免费"）
+     * @param freeTag           免费标签文字（如 "完全免费"）
      * @param costDetails       详细费用说明
      * @param registrationUrl   官网注册地址
      * @param apiKeyHelp        获取 API Key 的帮助文字
