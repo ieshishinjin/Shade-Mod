@@ -29,7 +29,7 @@ public class StoryPayloads {
             String activeTextPreview,
             List<ScriptInfo> scripts
     ) implements CustomPacketPayload {
-        public record ScriptInfo(String id, String title, boolean completed) {}
+        public record ScriptInfo(String id, String title, String description, boolean completed) {}
         public static final CustomPacketPayload.Type<StoryMenuPayload> TYPE =
                 new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:story_menu"));
         public static final StreamCodec<RegistryFriendlyByteBuf, StoryMenuPayload> CODEC = StreamCodec.of(
@@ -37,11 +37,11 @@ public class StoryPayloads {
                     buf.writeBoolean(p.hasActiveStory); buf.writeUtf(p.activeScriptId, 128);
                     buf.writeUtf(p.activeScriptTitle, 128); buf.writeUtf(p.activeSpeaker, 64);
                     buf.writeUtf(p.activeTextPreview, 256);
-                    buf.writeCollection(p.scripts, (b, s) -> { b.writeUtf(s.id(), 64); b.writeUtf(s.title(), 128); b.writeBoolean(s.completed()); });
+                    buf.writeCollection(p.scripts, (b, s) -> { b.writeUtf(s.id(), 64); b.writeUtf(s.title(), 128); b.writeUtf(s.description(), 256); b.writeBoolean(s.completed()); });
                 },
                 buf -> new StoryMenuPayload(buf.readBoolean(), buf.readUtf(128), buf.readUtf(128),
                         buf.readUtf(64), buf.readUtf(256),
-                        buf.readList(b -> new StoryMenuPayload.ScriptInfo(b.readUtf(64), b.readUtf(128), b.readBoolean()))));
+                        buf.readList(b -> new StoryMenuPayload.ScriptInfo(b.readUtf(64), b.readUtf(128), b.readUtf(256), b.readBoolean()))));
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
@@ -94,6 +94,12 @@ public class StoryPayloads {
     }
 
     private static void sendMenuToClient(ServerPlayer player, StoryEngine engine) {
+        StoryManager mgr = StoryManager.getInstance(player.serverLevel());
+        List<StoryMenuPayload.ScriptInfo> scripts = new ArrayList<>();
+        for (var script : engine.getAllScripts()) {
+            scripts.add(new StoryMenuPayload.ScriptInfo(script.getId(), script.getTitle(),
+                    script.getDescription() != null ? script.getDescription() : "", mgr.isScriptCompleted(player, script.getId())));
+        }
         String activeId = engine.getActiveScriptId(player);
         String activeTitle = "", activeSpeaker = "", activeText = "";
         if (activeId != null) {
@@ -102,9 +108,6 @@ public class StoryPayloads {
             var n = engine.getCurrentNode(player);
             if (n != null) { activeSpeaker = n.getSpeaker() != null ? n.getSpeaker() : ""; activeText = n.getText() != null ? n.getText().substring(0, Math.min(n.getText().length(), 80)) : ""; }
         }
-        StoryManager mgr = StoryManager.getInstance(player.serverLevel());
-        List<StoryMenuPayload.ScriptInfo> scripts = new ArrayList<>();
-        for (var script : engine.getAllScripts()) scripts.add(new StoryMenuPayload.ScriptInfo(script.getId(), script.getTitle(), mgr.isScriptCompleted(player, script.getId())));
         ServerPlayNetworking.send(player, new StoryMenuPayload(activeId != null, activeId != null ? activeId : "", activeTitle, activeSpeaker, activeText, scripts));
     }
 

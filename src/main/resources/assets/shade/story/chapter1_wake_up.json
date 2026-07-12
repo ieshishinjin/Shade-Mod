@@ -1,6 +1,7 @@
 {
     "id": "chapter1_wake_up",
     "title": "第一章：苏醒",
+    "description": "你在晨曦营地中醒来，失去了所有记忆。神秘的向导阿卡娅将指引你踏上冒险之路。完成她的第一个任务——侦察西边哨站。",
     "start_node": "start",
     "nodes": {
         "start": {

@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class StoryMenuScreen extends Screen {
@@ -35,11 +36,9 @@ public class StoryMenuScreen extends Screen {
         int cx = width / 2;
         int lx = cx - (LEFT_W + GAP / 2);
         int rx = cx + GAP / 2;
-        int rw = LEFT_W;
         int availH = height - TOP - BOTTOM_MARGIN;
         int itemH = 24;
 
-        // 左栏：剧情列表（始终显示）
         int listH = scripts.size() * itemH;
         int startY = TOP + Math.max(0, (availH - listH) / 2);
 
@@ -47,14 +46,10 @@ public class StoryMenuScreen extends Screen {
             var s = scripts.get(i);
             int idx = i;
             String label = (s.completed() ? "√ " : (hasActive && s.id().equals(activeId) ? "▶ " : "○ ")) + s.title();
-            int finalI = i;
-            addRenderableWidget(Button.builder(Component.literal(label), btn -> {
-                selectedIndex = finalI;
-                updateActionButton();
-            }).bounds(lx, startY + i * itemH, LEFT_W, 22).build());
+            addRenderableWidget(Button.builder(Component.literal(label), btn -> { selectedIndex = idx; updateActionButton(); })
+                    .bounds(lx, startY + i * itemH, LEFT_W, 22).build());
         }
 
-        // 左栏底部：画廊 / 关闭
         int bottomY = height - BOTTOM_MARGIN;
         galleryButton = Button.builder(Component.literal("§6画廊"), btn -> runCmd("story gallery"))
                 .bounds(lx, bottomY, 95, 20).build();
@@ -63,7 +58,6 @@ public class StoryMenuScreen extends Screen {
                 .bounds(lx + 100, bottomY, 95, 20).build();
         addRenderableWidget(closeButton);
 
-        // 右栏底部：操作按钮（选中后才显示）
         actionButton = Button.builder(Component.literal(""), btn -> doAction())
                 .bounds(rx, bottomY, LEFT_W, 22).build();
         actionButton.visible = false;
@@ -74,8 +68,7 @@ public class StoryMenuScreen extends Screen {
         if (selectedIndex >= 0 && selectedIndex < scripts.size()) {
             var sel = scripts.get(selectedIndex);
             boolean isActive = hasActive && sel.id().equals(activeId);
-            if (isActive) actionButton.setMessage(Component.literal("§l▶ 继续"));
-            else actionButton.setMessage(Component.literal("§l▶ 开始"));
+            actionButton.setMessage(Component.literal(isActive ? "§l▶ 继续" : "§l▶ 开始"));
             actionButton.visible = true;
         } else {
             actionButton.visible = false;
@@ -88,22 +81,17 @@ public class StoryMenuScreen extends Screen {
         super.render(g, mx, my, d);
 
         int cx = width / 2;
-        int lx = cx - (LEFT_W + GAP / 2);
         int rx = cx + GAP / 2;
         int rw = LEFT_W;
 
-        // 标题
         g.drawString(font, "§l§6✦ 剧情选择", cx - 38, 16, 0xFFFFD700, false);
 
-        // 右栏详情（仅选中时显示）
         if (selectedIndex >= 0 && selectedIndex < scripts.size()) {
             var sel = scripts.get(selectedIndex);
             boolean isActive = hasActive && sel.id().equals(activeId);
 
-            // 右栏顶部对齐左栏第一行
             int availH = height - TOP - BOTTOM_MARGIN;
-            int itemH = 24;
-            int listH = scripts.size() * itemH;
+            int listH = scripts.size() * 24;
             int startY = TOP + Math.max(0, (availH - listH) / 2);
 
             int dy = startY;
@@ -112,7 +100,35 @@ public class StoryMenuScreen extends Screen {
             g.drawString(font, sel.completed() ? "§a✦ 已完成" : (isActive ? "§b▶ 进行中" : "§7○ 未开始"), rx, dy, 0xFFAAAAAA, false);
             dy += 16;
             g.drawString(font, "§7ID: §f" + sel.id(), rx, dy, 0xFF888888, false);
+            dy += 18;
+
+            // 剧情描述
+            String desc = sel.description();
+            if (desc != null && !desc.isEmpty()) {
+                for (String line : wrapText(desc, rw)) {
+                    g.drawString(font, "§7" + line, rx, dy, 0xFFAAAAAA, false);
+                    dy += 10;
+                }
+            }
         }
+    }
+
+    private List<String> wrapText(String text, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty()) return lines;
+        for (String para : text.split("\n", -1)) {
+            if (para.isEmpty()) { lines.add(""); continue; }
+            StringBuilder cur = new StringBuilder();
+            for (int i = 0; i < para.length(); i++) {
+                String test = cur.toString() + para.charAt(i);
+                if (font.width(test) > maxWidth && cur.length() > 0) {
+                    lines.add(cur.toString());
+                    cur = new StringBuilder(String.valueOf(para.charAt(i)));
+                } else cur.append(para.charAt(i));
+            }
+            if (!cur.isEmpty()) lines.add(cur.toString());
+        }
+        return lines;
     }
 
     private void doAction() {
@@ -125,16 +141,8 @@ public class StoryMenuScreen extends Screen {
 
     @Override
     public boolean keyPressed(int k, int s, int m) {
-        if (k == 265) {
-            selectedIndex = selectedIndex <= 0 ? scripts.size() - 1 : selectedIndex - 1;
-            updateActionButton();
-            return true;
-        }
-        if (k == 264) {
-            selectedIndex = selectedIndex >= scripts.size() - 1 ? 0 : selectedIndex + 1;
-            updateActionButton();
-            return true;
-        }
+        if (k == 265) { selectedIndex = selectedIndex <= 0 ? scripts.size() - 1 : selectedIndex - 1; updateActionButton(); return true; }
+        if (k == 264) { selectedIndex = selectedIndex >= scripts.size() - 1 ? 0 : selectedIndex + 1; updateActionButton(); return true; }
         if (k == 257 || k == 335) { doAction(); return true; }
         if (k == 71) { runCmd("story gallery"); return true; }
         if (k == 256) { onClose(); return true; }
@@ -143,8 +151,7 @@ public class StoryMenuScreen extends Screen {
 
     private void runCmd(String cmd) {
         Minecraft.getInstance().setScreen(null);
-        if (Minecraft.getInstance().player != null)
-            Minecraft.getInstance().player.connection.sendCommand(cmd);
+        if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.connection.sendCommand(cmd);
     }
 
     @Override public boolean shouldCloseOnEsc() { return true; }
