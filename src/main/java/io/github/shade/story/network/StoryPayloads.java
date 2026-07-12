@@ -178,6 +178,9 @@ public class StoryPayloads {
             if (engine.isInStory(player)) {
                 StoryNode node = engine.getCurrentNode(player);
                 sendNodeToClient(player, engine, node);
+            } else {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "§7当前没有正在进行的剧情，使用 §e/story start <脚本名>§7 开始"));
             }
             return;
         }

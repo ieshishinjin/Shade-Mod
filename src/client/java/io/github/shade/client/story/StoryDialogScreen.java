@@ -4,34 +4,36 @@ import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class StoryDialogScreen extends Screen {
 
-    // === 显示数据 ===
-    private int type;              // 0=对话, 1=选项, 2=任务, 3=关闭
+    private int type;
     private String speaker;
     private String portraitPath;
     private String fullText;
     private List<String[]> options;
     private String scriptTitle;
 
-    // === 打字机效果 ===
+    // 打字机效果
     private int visibleChars = 0;
     private int typewriterDelay = 0;
-    private static final int CHARS_PER_TICK = 2;        // 每 tick 显示字数
-    private static final int INITIAL_DELAY = 10;         // 初始延迟 ticks
+    private static final int CHARS_PER_TICK = 2;
+    private static final int INITIAL_DELAY = 10;
     private boolean textFullyVisible = false;
 
-    // === 布局常量 ===
+    // 结束语淡入淡出（仅 type=4）
+    private int fadeTicks = 8;
+    private static final int FADE_DURATION = 8;
+    private boolean closing = false;
+
+    // 布局常量
     private static final int DIALOG_BOX_HEIGHT = 130;
     private static final int DIALOG_BOX_MARGIN = 16;
     private static final int PORTRAIT_SIZE = 80;
@@ -40,15 +42,15 @@ public class StoryDialogScreen extends Screen {
     private static final int OPTION_BUTTON_HEIGHT = 28;
     private static final int OPTION_BUTTON_SPACING = 4;
 
-    // === 颜色常量 ===
-    private static final int BG_COLOR = 0xCC111111;
+    // 颜色常量
     private static final int DIALOG_BG_COLOR = 0xDD1A1A2E;
     private static final int TEXT_COLOR = 0xFFEEEEEE;
+    private static final int NARRATION_COLOR = 0xFFAAAAAA;
     private static final int SPEAKER_COLOR = 0xFFFFD700;
     private static final int CONTINUE_COLOR = 0x88AAAAAA;
 
-    // === 是否正在打字中 ===
     private boolean typing = true;
+    private static final Pattern QUOTE_PATTERN = Pattern.compile("「[^」]*」");
 
     public StoryDialogScreen(int type, String speaker, String portraitPath,
                               String text, List<String[]> options, String scriptTitle) {
@@ -63,18 +65,28 @@ public class StoryDialogScreen extends Screen {
         this.typewriterDelay = INITIAL_DELAY;
         this.typing = true;
         this.textFullyVisible = false;
+        this.fadeTicks = type == 4 ? 0 : FADE_DURATION; // 仅结束语有淡入
     }
 
     @Override
     public void tick() {
         super.tick();
 
+        // 结束语淡入（仅 type=4）
+        if (type == 4 && fadeTicks < FADE_DURATION && !closing) fadeTicks++;
+
+        // 结束语淡出
+        if (closing) {
+            fadeTicks--;
+            if (fadeTicks <= 0) Minecraft.getInstance().setScreen(null);
+        }
+
+        // 打字机效果
         if (typing && visibleChars < fullText.length()) {
             typewriterDelay--;
             if (typewriterDelay <= 0) {
                 visibleChars = Math.min(visibleChars + CHARS_PER_TICK, fullText.length());
                 typewriterDelay = 1;
-
                 if (visibleChars >= fullText.length()) {
                     typing = false;
                     textFullyVisible = true;
@@ -90,281 +102,211 @@ public class StoryDialogScreen extends Screen {
         int width = this.width;
         int height = this.height;
 
-        // 对话框区域
         int dialogLeft = DIALOG_BOX_MARGIN;
         int dialogRight = width - DIALOG_BOX_MARGIN;
         int dialogBottom = height - DIALOG_BOX_MARGIN;
         int dialogTop = dialogBottom - DIALOG_BOX_HEIGHT;
-        int dialogWidth = dialogRight - dialogLeft;
 
-        // 绘制对话框背景
+        // 对话框背景
         graphics.fill(dialogLeft, dialogTop, dialogRight, dialogBottom, DIALOG_BG_COLOR);
-        // 顶部装饰线
         graphics.fill(dialogLeft, dialogTop, dialogRight, dialogTop + 2, 0xFFFFD700);
 
-        // 绘制立绘占位（左侧）
+        // 立绘（下移6px与字体顶部视觉对齐）
         int portraitLeft = dialogLeft + PORTRAIT_MARGIN;
-        int portraitTop = dialogTop + PORTRAIT_MARGIN;
+        int portraitTop = dialogTop + PORTRAIT_MARGIN - 2;
         drawPortrait(graphics, portraitLeft, portraitTop);
 
-        // 文本区域（立绘右侧）
+        // 文本区域
         int textLeft = portraitLeft + PORTRAIT_SIZE + PORTRAIT_MARGIN;
-        int textTop = dialogTop + PORTRAIT_MARGIN;           // 与 portraitTop 相同 Y
+        int textTop = dialogTop + PORTRAIT_MARGIN;
         int textWidth = dialogRight - textLeft - TEXT_LEFT_MARGIN;
-        int textHeight = DIALOG_BOX_HEIGHT - PORTRAIT_MARGIN * 2;
 
-        // 绘制说话人名称（与头像顶边精准对齐）
+        // 说话人名称
         if (speaker != null && !speaker.isEmpty() && type != 2) {
-            graphics.drawString(
-                    font,
-                    "§e§l" + speaker,
-                    textLeft, portraitTop - 3,
-                    SPEAKER_COLOR, false
-            );
+            graphics.drawString(font, "§e§l" + speaker, textLeft, textTop, SPEAKER_COLOR, false);
         }
 
-        // 绘制对话文本（带打字机效果）
+        // 对话文本
         String displayText = fullText.substring(0, Math.min(visibleChars, fullText.length()));
-
-        // 手动分行（支持 \n 和自动换行）
         List<String> lines = wrapText(displayText, textWidth);
-        int lineY = portraitTop + (speaker != null && !speaker.isEmpty() && type != 2 ? font.lineHeight + 4 : 0);
+        int lineY = textTop + (speaker != null && !speaker.isEmpty() && type != 2 ? font.lineHeight + 4 : 0);
 
         for (String line : lines) {
             if (lineY + font.lineHeight > dialogBottom - 10) break;
-            graphics.drawString(font, line, textLeft, lineY, TEXT_COLOR, false);
+            renderStyledText(graphics, line, textLeft, lineY);
             lineY += font.lineHeight + 2;
         }
 
-        // 绘制选项按钮（type=1 时）
+        // 选项按钮
         if (type == 1 && options != null && !options.isEmpty() && textFullyVisible) {
             drawOptionButtons(graphics, dialogLeft, dialogRight, dialogTop, mouseX, mouseY);
         }
 
-        // 绘制"点击继续"提示（文本完全显示后）
-        if (textFullyVisible && type != 1) {
+        // 继续提示
+        if (textFullyVisible && type != 1 && type != 4) {
             String hint = "§7[ 点击继续 ]";
-            int hintWidth = font.width(hint);
             graphics.drawString(font, hint,
-                    dialogRight - hintWidth - TEXT_LEFT_MARGIN,
+                    dialogRight - font.width(hint) - TEXT_LEFT_MARGIN,
                     dialogBottom - 14, CONTINUE_COLOR, false);
         }
 
-        // 绘制标题（右上角）
+        // 结束语提示
+        if (textFullyVisible && type == 4) {
+            String hint = "§7[ 点击关闭 ]";
+            graphics.drawString(font, hint,
+                    dialogRight - font.width(hint) - TEXT_LEFT_MARGIN,
+                    dialogBottom - 14, CONTINUE_COLOR, false);
+        }
+
+        // 标题
         if (scriptTitle != null && !scriptTitle.isEmpty()) {
             graphics.drawString(font, "§7" + scriptTitle,
                     width - font.width(scriptTitle) - 10, 10, 0x88AAAAAA, false);
         }
+
+        // === 结束语淡入淡出遮罩（仅 type=4） ===
+        if (type == 4 && fadeTicks < FADE_DURATION) {
+            int alpha = (int)((1.0f - (float)fadeTicks / FADE_DURATION) * 200);
+            graphics.fill(0, 0, width, height, (alpha << 24) | 0x000000);
+        }
     }
 
-    /**
-     * 绘制立绘（或占位）
-     */
     private void drawPortrait(GuiGraphics graphics, int x, int y) {
         if (portraitPath != null && !portraitPath.isEmpty()) {
             try {
-                // 安全解析路径（无效字符不会崩溃）
-                ResourceLocation portraitLocation = ResourceLocation.parse(portraitPath);
-                graphics.blit(portraitLocation, x, y, 0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE);
+                ResourceLocation loc = ResourceLocation.parse(portraitPath);
+                graphics.blit(loc, x, y, 0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE, PORTRAIT_SIZE);
                 return;
-            } catch (Exception ignored) {
-                // 纹理不存在或路径无效，回退到占位
-            }
+            } catch (Exception ignored) {}
         }
-
-        // 默认占位框（紫色边框 + 半透明底色）
         graphics.fill(x, y, x + PORTRAIT_SIZE, y + PORTRAIT_SIZE, 0x66444466);
-        graphics.fill(x, y, x + PORTRAIT_SIZE, y + 1, 0xFFAA66DD);       // 上
-        graphics.fill(x, y, x + 1, y + PORTRAIT_SIZE, 0xFFAA66DD);       // 左
-        graphics.fill(x + PORTRAIT_SIZE - 1, y, x + PORTRAIT_SIZE, y + PORTRAIT_SIZE, 0xFFAA66DD); // 右
-        graphics.fill(x, y + PORTRAIT_SIZE - 1, x + PORTRAIT_SIZE, y + PORTRAIT_SIZE, 0xFFAA66DD); // 下
-
-        // 中间画一个问号
-        graphics.drawString(font, "§5?",
-                x + PORTRAIT_SIZE / 2 - 4, y + PORTRAIT_SIZE / 2 - 4, 0xFFAA66DD, false);
+        graphics.fill(x, y, x + PORTRAIT_SIZE, y + 1, 0xFFAA66DD);
+        graphics.fill(x, y, x + 1, y + PORTRAIT_SIZE, 0xFFAA66DD);
+        graphics.fill(x + PORTRAIT_SIZE - 1, y, x + PORTRAIT_SIZE, y + PORTRAIT_SIZE, 0xFFAA66DD);
+        graphics.fill(x, y + PORTRAIT_SIZE - 1, x + PORTRAIT_SIZE, y + PORTRAIT_SIZE, 0xFFAA66DD);
+        graphics.drawString(font, "§5?", x + PORTRAIT_SIZE / 2 - 4, y + PORTRAIT_SIZE / 2 - 4, 0xFFAA66DD, false);
     }
 
-    /**
-     * 绘制选项按钮
-     */
-    private void drawOptionButtons(GuiGraphics graphics, int dialogLeft, int dialogRight,
-                                    int dialogTop, int mouseX, int mouseY) {
+    private void drawOptionButtons(GuiGraphics g, int dl, int dr, int dt, int mx, int my) {
         if (options == null) return;
-
-        int btnWidth = (dialogRight - dialogLeft) - TEXT_LEFT_MARGIN * 2;
-        int totalHeight = options.size() * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
-        int startY = dialogTop - totalHeight - 10;
-
-        // 防止按钮超出屏幕顶部
-        if (startY < 10) startY = 10;
-
+        int bw = (dr - dl) - TEXT_LEFT_MARGIN * 2;
+        int sy = dt - options.size() * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING) - 10;
+        if (sy < 10) sy = 10;
         for (int i = 0; i < options.size(); i++) {
-            int btnX = dialogLeft + TEXT_LEFT_MARGIN;
-            int btnY = startY + i * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
-
-            boolean hovered = mouseX >= btnX && mouseX <= btnX + btnWidth
-                    && mouseY >= btnY && mouseY <= btnY + OPTION_BUTTON_HEIGHT;
-
-            int bgColor = hovered ? 0xCC444466 : 0xCC222244;
-            int borderColor = hovered ? 0xFFFFD700 : 0x88555588;
-
-            // 按钮背景
-            graphics.fill(btnX, btnY, btnX + btnWidth, btnY + OPTION_BUTTON_HEIGHT, bgColor);
-            // 边框
-            graphics.fill(btnX, btnY, btnX + btnWidth, btnY + 1, borderColor);
-            graphics.fill(btnX, btnY + OPTION_BUTTON_HEIGHT - 1, btnX + btnWidth, btnY + OPTION_BUTTON_HEIGHT, borderColor);
-            graphics.fill(btnX, btnY, btnX + 1, btnY + OPTION_BUTTON_HEIGHT, borderColor);
-            graphics.fill(btnX + btnWidth - 1, btnY, btnX + btnWidth, btnY + OPTION_BUTTON_HEIGHT, borderColor);
-
-            // 选项文本
-            String label = "§6[" + (i + 1) + "] §f" + options.get(i)[0];
-            graphics.drawString(font, label,
-                    btnX + 10, btnY + (OPTION_BUTTON_HEIGHT - font.lineHeight) / 2,
-                    0xFFEEEEEE, false);
+            int bx = dl + TEXT_LEFT_MARGIN;
+            int by = sy + i * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
+            boolean h = mx >= bx && mx <= bx + bw && my >= by && my <= by + OPTION_BUTTON_HEIGHT;
+            g.fill(bx, by, bx + bw, by + OPTION_BUTTON_HEIGHT, h ? 0xCC444466 : 0xCC222244);
+            g.fill(bx, by, bx + bw, by + 1, h ? 0xFFFFD700 : 0x88555588);
+            g.fill(bx, by + OPTION_BUTTON_HEIGHT - 1, bx + bw, by + OPTION_BUTTON_HEIGHT, h ? 0xFFFFD700 : 0x88555588);
+            g.fill(bx, by, bx + 1, by + OPTION_BUTTON_HEIGHT, h ? 0xFFFFD700 : 0x88555588);
+            g.fill(bx + bw - 1, by, bx + bw, by + OPTION_BUTTON_HEIGHT, h ? 0xFFFFD700 : 0x88555588);
+            g.drawString(font, "§6[" + (i + 1) + "] §f" + options.get(i)[0],
+                    bx + 10, by + (OPTION_BUTTON_HEIGHT - font.lineHeight) / 2, 0xFFEEEEEE, false);
         }
     }
 
-    /**
-     * 文本自动换行
-     */
     private List<String> wrapText(String text, int maxWidth) {
         List<String> lines = new ArrayList<>();
-        if (text == null || text.isEmpty()) {
-            lines.add("");
-            return lines;
+        if (text == null || text.isEmpty()) { lines.add(""); return lines; }
+        for (String para : text.split("\n", -1)) {
+            if (para.isEmpty()) { lines.add(""); continue; }
+            StringBuilder cur = new StringBuilder();
+            for (int i = 0; i < para.length(); i++) {
+                String test = cur.toString() + para.charAt(i);
+                if (font.width(test) > maxWidth && cur.length() > 0) {
+                    lines.add(cur.toString());
+                    cur = new StringBuilder(String.valueOf(para.charAt(i)));
+                } else cur.append(para.charAt(i));
+            }
+            if (!cur.isEmpty()) lines.add(cur.toString());
         }
-
-        // 先按 \n 分段
-        String[] paragraphs = text.split("\n", -1);
-        for (String paragraph : paragraphs) {
-            if (paragraph.isEmpty()) {
-                lines.add("");
-                continue;
-            }
-
-            // 对长段进行自动换行
-            StringBuilder currentLine = new StringBuilder();
-            String[] words = paragraph.split(" ", -1);
-
-            for (String word : words) {
-                String testLine = currentLine.isEmpty() ? word : currentLine + " " + word;
-                if (font.width(testLine) > maxWidth && !currentLine.isEmpty()) {
-                    lines.add(currentLine.toString());
-                    currentLine = new StringBuilder(word);
-                } else {
-                    currentLine = new StringBuilder(testLine);
-                }
-            }
-            if (!currentLine.isEmpty()) {
-                lines.add(currentLine.toString());
-            }
-        }
-
         return lines;
     }
 
+    private void renderStyledText(GuiGraphics g, String line, int x, int y) {
+        if (line.isEmpty()) return;
+        java.util.regex.Matcher m = QUOTE_PATTERN.matcher(line);
+        int last = 0, dx = x;
+        while (m.find()) {
+            if (m.start() > last) {
+                String nar = line.substring(last, m.start());
+                g.drawString(font, "§7" + nar, dx, y, NARRATION_COLOR, false);
+                dx += font.width(nar);
+            }
+            String dia = m.group();
+            g.drawString(font, "§f" + dia, dx, y, TEXT_COLOR, false);
+            dx += font.width(dia);
+            last = m.end();
+        }
+        if (last < line.length()) {
+            String rem = line.substring(last);
+            g.drawString(font, "§7" + rem, dx, y, NARRATION_COLOR, false);
+        }
+    }
+
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            // 正在打字 → 点击加速完成
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn == 0) {
             if (typing && visibleChars < fullText.length()) {
-                visibleChars = fullText.length();
-                typing = false;
-                textFullyVisible = true;
+                visibleChars = fullText.length(); typing = false; textFullyVisible = true;
                 return true;
             }
-
-            // 选项模式 → 检查是否点击了选项
             if (type == 1 && options != null && textFullyVisible) {
-                int dialogLeft = DIALOG_BOX_MARGIN;
-                int dialogRight = width - DIALOG_BOX_MARGIN;
-                int dialogBottom = height - DIALOG_BOX_MARGIN;
-                int dialogTop = dialogBottom - DIALOG_BOX_HEIGHT;
-
-                int btnWidth = (dialogRight - dialogLeft) - TEXT_LEFT_MARGIN * 2;
-                int totalHeight = options.size() * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
-                int startY = dialogTop - totalHeight - 10;
-                if (startY < 10) startY = 10;
-
+                int dl = DIALOG_BOX_MARGIN, dr = width - DIALOG_BOX_MARGIN;
+                int db = height - DIALOG_BOX_MARGIN, dt = db - DIALOG_BOX_HEIGHT;
+                int bw = (dr - dl) - TEXT_LEFT_MARGIN * 2;
+                int sy = dt - options.size() * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING) - 10;
+                if (sy < 10) sy = 10;
                 for (int i = 0; i < options.size(); i++) {
-                    int btnX = dialogLeft + TEXT_LEFT_MARGIN;
-                    int btnY = startY + i * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
-
-                    if (mouseX >= btnX && mouseX <= btnX + btnWidth
-                            && mouseY >= btnY && mouseY <= btnY + OPTION_BUTTON_HEIGHT) {
-                        // 发送选择到服务器
+                    int bx = dl + TEXT_LEFT_MARGIN;
+                    int by = sy + i * (OPTION_BUTTON_HEIGHT + OPTION_BUTTON_SPACING);
+                    if (mx >= bx && mx <= bx + bw && my >= by && my <= by + OPTION_BUTTON_HEIGHT) {
                         ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.choose(i));
                         return true;
                     }
                 }
             }
-
-            // 对话/结束语已完全显示 → 推进或关闭
             if (textFullyVisible && type != 1) {
-                if (type == 4) {
-                    Minecraft.getInstance().setScreen(null);
-                    return true;
-                }
+                if (type == 4) { startClose(); return true; }
                 ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(mx, my, btn);
     }
 
-    /**
-     * 按任意键加速/继续（同鼠标点击）
-     */
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // ESC 键(256) → 关闭对话框，不触发 advance
-        if (keyCode == 256) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(int keyCode, int scanCode, int mod) {
+        if (keyCode == 256) { // ESC
+            if (type == 4) { startClose(); return true; }
+            return super.keyPressed(keyCode, scanCode, mod);
         }
         if (typing && visibleChars < fullText.length()) {
-            visibleChars = fullText.length();
-            typing = false;
-            textFullyVisible = true;
+            visibleChars = fullText.length(); typing = false; textFullyVisible = true;
             return true;
         }
         if (textFullyVisible && type != 1) {
-            if (type == 4) {
-                Minecraft.getInstance().setScreen(null);
-                return true;
-            }
+            if (type == 4) { startClose(); return true; }
             ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.advance());
             return true;
         }
-        if (type == 1 && textFullyVisible) {
-            if (keyCode >= 49 && keyCode <= 57) {
-                int idx = keyCode - 49;
-                if (options != null && idx < options.size()) {
-                    ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.choose(idx));
-                    return true;
-                }
+        if (type == 1 && textFullyVisible && keyCode >= 49 && keyCode <= 57) {
+            int idx = keyCode - 49;
+            if (options != null && idx < options.size()) {
+                ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.choose(idx));
+                return true;
             }
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, mod);
     }
 
-    @Override
-    public void onClose() {
-        super.onClose();
-    }
+    private void startClose() { closing = true; fadeTicks = FADE_DURATION; }
 
-    @Override
-    public boolean shouldCloseOnEsc() {
-        return true;
-    }
+    @Override public void onClose() { super.onClose(); }
+    @Override public boolean shouldCloseOnEsc() { return type != 4; }
+    @Override public boolean isPauseScreen() { return false; }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false; // 不暂停游戏
-    }
-
-    /**
-     * 更新屏幕内容（从网络包接收）
-     */
     public void updateContent(int type, String speaker, String portraitPath,
                                String text, List<String[]> options, String scriptTitle) {
         this.type = type;
@@ -377,6 +319,8 @@ public class StoryDialogScreen extends Screen {
         this.typewriterDelay = INITIAL_DELAY;
         this.typing = true;
         this.textFullyVisible = false;
+        this.closing = false;
+        this.fadeTicks = type == 4 ? 0 : FADE_DURATION;
     }
 
     public static void openOrUpdate(int type, String speaker, String portraitPath,
@@ -384,14 +328,10 @@ public class StoryDialogScreen extends Screen {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
             if (type == 3) {
-                if (client.screen instanceof StoryDialogScreen) {
-                    client.setScreen(null);
-                }
+                if (client.screen instanceof StoryDialogScreen) client.setScreen(null);
                 return;
             }
-
             if (type == 4) {
-                // END 类型：显示结束语，点击后关闭（不推进剧情）
                 if (client.screen instanceof StoryDialogScreen existing) {
                     existing.updateContent(4, "", "", text, null, "");
                 } else {
@@ -399,14 +339,10 @@ public class StoryDialogScreen extends Screen {
                 }
                 return;
             }
-
             if (client.screen instanceof StoryDialogScreen existing) {
-                // 更新现有对话框
                 existing.updateContent(type, speaker, portraitPath, text, options, scriptTitle);
             } else {
-                // 打开新对话框
-                client.setScreen(new StoryDialogScreen(
-                        type, speaker, portraitPath, text, options, scriptTitle));
+                client.setScreen(new StoryDialogScreen(type, speaker, portraitPath, text, options, scriptTitle));
             }
         });
     }
