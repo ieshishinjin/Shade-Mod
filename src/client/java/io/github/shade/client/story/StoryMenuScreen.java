@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.aigen.AiGenerateScreen;
 import io.github.shade.story.network.StoryPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,7 +17,7 @@ public class StoryMenuScreen extends Screen {
     private final String activeId;
     private final boolean hasActive;
     private int selectedIndex = -1;
-    private Button actionButton, galleryButton, closeButton;
+    private Button actionButton, galleryButton, aiButton, closeButton;
 
     private static final int TOP = 50;
     private static final int BOTTOM_MARGIN = 50;
@@ -51,11 +52,18 @@ public class StoryMenuScreen extends Screen {
         }
 
         int bottomY = height - BOTTOM_MARGIN;
+
         galleryButton = Button.builder(Component.literal("§6画廊"), btn -> runCmd("story gallery"))
-                .bounds(lx, bottomY, 95, 20).build();
+                .bounds(lx, bottomY, 63, 20).build();
         addRenderableWidget(galleryButton);
+
+        aiButton = Button.builder(Component.literal("§bAI"), btn -> {
+            Minecraft.getInstance().setScreen(new AiGenerateScreen());
+        }).bounds(lx + 67, bottomY, 63, 20).build();
+        addRenderableWidget(aiButton);
+
         closeButton = Button.builder(Component.literal("§7关闭"), btn -> onClose())
-                .bounds(lx + 100, bottomY, 95, 20).build();
+                .bounds(lx + 134, bottomY, 63, 20).build();
         addRenderableWidget(closeButton);
 
         actionButton = Button.builder(Component.literal(""), btn -> doAction())
@@ -102,7 +110,6 @@ public class StoryMenuScreen extends Screen {
             g.drawString(font, "§7ID: §f" + sel.id(), rx, dy, 0xFF888888, false);
             dy += 18;
 
-            // 剧情描述
             String desc = sel.description();
             if (desc != null && !desc.isEmpty()) {
                 for (String line : wrapText(desc, rw)) {
@@ -151,7 +158,8 @@ public class StoryMenuScreen extends Screen {
 
     private void runCmd(String cmd) {
         Minecraft.getInstance().setScreen(null);
-        if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.connection.sendCommand(cmd);
+        if (Minecraft.getInstance().player != null)
+            Minecraft.getInstance().player.connection.sendCommand(cmd);
     }
 
     @Override public boolean shouldCloseOnEsc() { return true; }
