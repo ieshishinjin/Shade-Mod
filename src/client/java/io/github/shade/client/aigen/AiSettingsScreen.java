@@ -66,7 +66,7 @@ public class AiSettingsScreen extends Screen {
         }
 
         // — 3. 模型名（仅自定义时显示） —
-        int y3 = py + 106;
+        int y3 = py + 110;
         if (isCustom) {
             modelInput = new EditBox(font, x, y3, iw - 72, 18, Component.literal("模型名"));
             modelInput.setMaxLength(64);
@@ -75,7 +75,7 @@ public class AiSettingsScreen extends Screen {
         }
 
         // — 4. API 密钥 —
-        int y4 = isCustom ? py + 134 : py + 78;
+        int y4 = isCustom ? py + 142 : py + 78;
         apiKeyInput = new EditBox(font, x, y4, iw - 66, 18, Component.literal("API 密钥"));
         apiKeyInput.setMaxLength(128);
         if (isDeepseek) apiKeyInput.setHint(Component.literal("sk-..."));
@@ -88,7 +88,7 @@ public class AiSettingsScreen extends Screen {
                 b -> saveConfig()));
 
         // — 5. 返回 —
-        int y5 = (isCustom ? py + 170 : py + 120);
+        int y5 = (isCustom ? py + 178 : py + 120);
         addRenderableWidget(new ThemeButton(cx - 50, y5, 100, 18, "← 返回主菜单", C_ACCENT, C_TEXT, false, false,
                 b -> Minecraft.getInstance().setScreen(new AiControlScreen())));
 
@@ -161,14 +161,14 @@ public class AiSettingsScreen extends Screen {
             g.drawString(font, "API 端点", x + 2, py + 68, C_MUTED, false);
 
             // 模型名
-            g.fill(x - 4, py + 96, x - 2, py + 98, C_ACCENT);
-            g.drawString(font, "模型名", x + 2, py + 96, C_MUTED, false);
+            g.fill(x - 4, py + 100, x - 2, py + 102, C_ACCENT);
+            g.drawString(font, "模型名", x + 2, py + 100, C_MUTED, false);
 
             // API 密钥
-            g.fill(x - 4, py + 124, x - 2, py + 126, C_ACCENT);
-            g.drawString(font, "API 密钥", x + 2, py + 124, C_MUTED, false);
+            g.fill(x - 4, py + 132, x - 2, py + 134, C_ACCENT);
+            g.drawString(font, "API 密钥", x + 2, py + 132, C_MUTED, false);
 
-            g.drawString(font, "当前: 自定义", x, py + 164, 0xFF5A5A7A, false);
+            g.drawString(font, "当前: 自定义", x, py + 170, 0xFF5A5A7A, false);
         } else {
             // API 密钥（非自定义）
             g.fill(x - 4, py + 68, x - 2, py + 70, C_ACCENT);
