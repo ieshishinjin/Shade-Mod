@@ -46,6 +46,7 @@
 | 快捷键 | 功能 | 可自定义 |
 |--------|------|----------|
 | **R** | 打开剧情菜单 | ✅ 设置→按键绑定→Shade 模组 |
+| **U** | AI 剧情控制面板（详见 [AiGui.md](AiGui.md)） | ✅ 设置→按键绑定→Shade 模组 |
 | **G** | 打开画廊（剧情菜单内） | — |
 | **↑↓** | 选择剧本（剧情菜单内） | — |
 | **Enter** | 确认选择（剧情菜单内） | — |
@@ -198,25 +199,9 @@ AI 生成器可根据游戏世界状态动态生成剧情内容。
 
 ### 7.1 配置
 
-支持两种 AI 后端：
+按 **U** 打开 AI 控制面板进行配置，详见 [AiGui.md](AiGui.md)。
 
-#### DeepSeek（推荐，需 API Key）
-
-```
-/story ai provider deepseek
-/story ai key sk-你的API密钥
-/story ai model deepseek-chat
-/story ai enable
-```
-
-#### Ollama（本地运行，免费）
-
-```
-/story ai provider ollama
-/story ai model llama3
-/story ai endpoint http://localhost:11434/api/chat
-/story ai enable
-```
+支持 DeepSeek、Ollama 和任意 OpenAI 兼容 API（自定义）。
 
 ### 7.2 免费服务商推荐
 
@@ -239,9 +224,9 @@ AI 生成器可根据游戏世界状态动态生成剧情内容。
 
 ### 7.3 使用 AI 生成
 
-#### 方法 1：通过 GUI
+#### 方法 1：通过 GUI（推荐）
 
-按 **R** → 剧情菜单 → 点击 **AI** 按钮 → 输入提示词 → 生成
+按 **U** → 打开 AI 控制面板 → 输入剧情描述 → 点击 **「▶ 生成剧情」** 或按回车
 
 #### 方法 2：通过命令
 
