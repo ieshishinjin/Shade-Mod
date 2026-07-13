@@ -2,170 +2,168 @@ package io.github.shade.client.aigen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/**
- * AI 控制中心 — 面板化布局
- */
 public class AiControlScreen extends Screen {
 
-    private EditBox promptInput;
-
-    // 布局常量
-    private static final int PANEL_W = 320;
-    private static final int PANEL_X = 0; // 动态计算
-    private static final int COL_LEFT = 0;
-    private static final int COL_RIGHT = 0;
-    private static final int BTN_W1 = 100, BTN_W2 = 80, BTN_W3 = 60;
-
     private int cx;
+    private String promptText = "";
+
+    // 浮动面板样式 — 无全屏遮罩，只有面板阴影
+    private static final int C_PANEL   = 0xDD151530;
+    private static final int C_LINE    = 0xFF44DDFF;
+    private static final int C_ACCENT  = 0xFF44DDFF;
+    private static final int C_TEXT    = 0xFFEEEEEE;
+    private static final int C_MUTED   = 0xFF8888AA;
+    private static final int C_BTN     = 0xFF2A2A50;
+    private static final int C_BTN_H   = 0xFF444488;
+    private static final int C_INPUT   = 0xFF1A1A3A;
+
+    private static final int PW = 340;
+    private int px, py;
 
     public AiControlScreen() {
-        super(Component.literal("AI 控制中心"));
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mx, int my, float d) {
-        renderBackground(g, mx, my, d);
-        super.render(g, mx, my, d);
-
-        int px = cx - PANEL_W / 2;
-        int textX = px + 12;
-
-        // 标题行
-        g.drawString(font, "§l§d✦ AI 剧情生成", textX, 18, 0xFFFF88FF, false);
-        g.drawString(font, "§a● 已启用", px + PANEL_W - 60, 20, 0xFF55FF55, false);
-
-        drawSection(g, "当前配置", px, 40, PANEL_W, 58);
-        g.drawString(font, "§7引擎: §fDeepSeek   §7模型: §fdeepseek-chat", textX, 52, 0xFFEEEEEE, false);
-        g.drawString(font, "§7温度: §f0.8        §7最大长度: §f1024", textX, 66, 0xFFEEEEEE, false);
-        // 测试按钮在面板内右对齐
-        g.drawString(font, "§7[测试连接]", px + PANEL_W - 55, 66, 0xFF888888, false);
-
-        drawSection(g, "AI 引擎", px, 108, PANEL_W, 72);
-        // 引擎按钮在面板内
-        drawBtn(g, "DeepSeek", textX, 122, 80);       // col1
-        drawBtn(g, "Ollama", textX + 85, 122, 80);     // col2
-        drawBtn(g, "§a启用", textX + 180, 122, 50);    // col3
-        drawBtn(g, "§c禁用", textX + 235, 122, 50);    // col4
-        // 免费标签
-        g.drawString(font, "§7免费推荐:", textX, 148, 0xFF888888, false);
-        drawBtn(g, "智谱AI", textX + 65, 146, 60);
-        drawBtn(g, "讯飞星火", textX + 130, 146, 65);
-        drawBtn(g, "Groq", textX + 200, 146, 55);
-
-        drawSection(g, "生成设置", px, 190, PANEL_W, 42);
-        g.drawString(font, "§7温度:", textX, 204, 0xFF888888, false);
-        drawBtn(g, "0.6", textX + 40, 202, 35);
-        drawBtn(g, "0.8", textX + 78, 202, 35);
-        drawBtn(g, "1.0", textX + 116, 202, 35);
-        g.drawString(font, "§7长度:", textX + 165, 204, 0xFF888888, false);
-        drawBtn(g, "短", textX + 200, 202, 35);
-        drawBtn(g, "长", textX + 238, 202, 35);
-
-        // 生成区域
-        drawSection(g, "生成剧情", px, 242, PANEL_W, 78);
-        // 输入框区域
-        g.fill(textX, 260, px + PANEL_W - 12, 280, 0xCC222244);
-        g.fill(textX, 260, px + PANEL_W - 12, 261, 0xFFFFD700);
-        // 输入框内文（init 前 render 可能为空）
-        String inputText = promptInput != null ? promptInput.getValue() : "";
-        if (inputText.isEmpty()) {
-            g.drawString(font, "§7输入剧情提示词...", textX + 4, 268, 0xFF666677, false);
-        } else {
-            g.drawString(font, "§f" + inputText, textX + 4, 268, 0xFFEEEEEE, false);
-        }
-        // 生成按钮
-        drawBtn(g, "§l▶ 生成剧情", textX + 50, 284, 170);
-
-        // 底栏
-        g.fill(px, 332, px + PANEL_W, 334, 0x33FFD700);
-        drawBtn(g, "§7推荐列表", textX, 338, 65);
-        drawBtn(g, "§7查看状态", textX + 70, 338, 65);
-        drawBtn(g, "§7自动生成", textX + 140, 338, 65);
-        drawBtn(g, "§7关闭", px + PANEL_W - 55, 338, 40);
-    }
-
-    private void drawSection(GuiGraphics g, String title, int x, int y, int w, int h) {
-        // 面板背景
-        g.fill(x, y, x + w, y + h, 0xCC151530);
-        // 顶边装饰线
-        g.fill(x, y, x + w, y + 1, 0x44FFD700);
-        // 标题标签
-        g.drawString(font, "§7" + title, x + 8, y + 4, 0xFFFFD700, false);
-    }
-
-    private void drawBtn(GuiGraphics g, String text, int x, int y, int w) {
-        boolean hover = false; // 简化实现
-        int bg = hover ? 0xCC444466 : 0xCC222244;
-        g.fill(x, y, x + w, y + 18, bg);
-        g.fill(x, y, x + w, y + 1, 0x885555AA);
-        g.drawString(font, text, x + (w - font.width(text)) / 2, y + 4, 0xFFEEEEEE, false);
+        super(Component.literal(""));
     }
 
     @Override
     protected void init() {
         super.init();
         cx = width / 2;
-        int px = cx - PANEL_W / 2;
-        int textX = px + 12;
+        px = cx - PW / 2;
+        py = (height - 340) / 2;
+    }
 
-        // 引擎选择
-        addRenderableWidget(Button.builder(Component.literal("DeepSeek"), btn -> runCmd("story ai provider deepseek"))
-                .bounds(textX, 122, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Ollama"), btn -> runCmd("story ai provider ollama"))
-                .bounds(textX + 85, 122, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("§a启用"), btn -> runCmd("story ai enable"))
-                .bounds(textX + 180, 122, 50, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("§c禁用"), btn -> runCmd("story ai disable"))
-                .bounds(textX + 235, 122, 50, 18).build());
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float d) {
+        // 面板阴影 — 三层扩散阴影，制造浮动感
+        int shadow1 = 0x22000000, shadow2 = 0x44000000, shadow3 = 0x66000000;
+        g.fill(px + 4, py + 4, px + PW + 4, py + 334, shadow3);
+        g.fill(px + 2, py + 3, px + PW + 2, py + 333, shadow2);
+        g.fill(px + 1, py + 1, px + PW + 1, py + 331, shadow1);
 
-        // 免费服务商
-        addRenderableWidget(Button.builder(Component.literal("智谱AI"), btn -> runCmd("story ai recommend zhipu"))
-                .bounds(textX + 65, 146, 60, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("讯飞星火"), btn -> runCmd("story ai recommend xunfei"))
-                .bounds(textX + 130, 146, 65, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Groq"), btn -> runCmd("story ai recommend groq"))
-                .bounds(textX + 200, 146, 55, 18).build());
+        // 面板 — 半透明（能看到后面的游戏）
+        g.fill(px, py, px + PW, py + 330, C_PANEL);
+        // 顶边高光线
+        g.fill(px, py, px + PW, py + 1, C_LINE);
 
-        // 参数
-        addRenderableWidget(Button.builder(Component.literal("0.6"), btn -> runCmd("story ai temperature 0.6"))
-                .bounds(textX + 40, 202, 35, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("0.8"), btn -> runCmd("story ai temperature 0.8"))
-                .bounds(textX + 78, 202, 35, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("1.0"), btn -> runCmd("story ai temperature 1.0"))
-                .bounds(textX + 116, 202, 35, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("短"), btn -> runCmd("story ai maxtokens 256"))
-                .bounds(textX + 200, 202, 35, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("长"), btn -> runCmd("story ai maxtokens 2048"))
-                .bounds(textX + 238, 202, 35, 16).build());
+        int x = px + 16;
+        int y = py + 18;
 
-        // 行内按钮（测试、生成、底部）
-        addRenderableWidget(Button.builder(Component.literal("§7测试连接"), btn -> testConnection())
-                .bounds(px + PANEL_W - 60, 120, 50, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("§l▶ 生成剧情"), btn -> doGenerate())
-                .bounds(textX + 50, 284, 170, 22).build());
+        drawText(g, "§l✦ AI 剧情生成", x, y, C_ACCENT, 14);
+        y += 26;
 
-        // 底栏
-        addRenderableWidget(Button.builder(Component.literal("§7推荐列表"), btn -> runCmd("story ai recommend"))
-                .bounds(textX, 338, 65, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("§7状态"), btn -> runCmd("story ai status"))
-                .bounds(textX + 70, 338, 65, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("§7自动"), btn -> runCmd("story ai autogen"))
-                .bounds(textX + 140, 338, 65, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("§7关闭"), btn -> onClose())
-                .bounds(px + PANEL_W - 55, 338, 40, 16).build());
+        drawText(g, "▎ 剧情进度", x, y, C_MUTED, 10);
+        y += 14;
+        drawText(g, "  ○ 第一章：苏醒  (进行中)", x, y, C_TEXT, 10);
+        y += 22;
+
+        drawText(g, "▎ AI 引擎", x, y, C_MUTED, 10);
+        y += 14;
+        y = drawBtnRow(g, mx, my, x, y, new String[]{"DeepSeek", "Ollama", "§a启用", "§c禁用"}, new int[]{90, 90, 50, 50});
+        y += 2;
+        y = drawBtnRow(g, mx, my, x, y, new String[]{"智谱AI(免费)", "讯飞星火(免费)", "Groq", "更多"}, new int[]{85, 95, 55, 45});
+        y += 20;
+
+        drawText(g, "▎ 生成参数", x, y, C_MUTED, 10);
+        y += 14;
+        y = drawBtnRow(g, mx, my, x, y, new String[]{"温度0.6", "温度0.8", "温度1.0", "短", "长"}, new int[]{65, 65, 65, 35, 35});
+        y += 20;
+
+        drawText(g, "▎ 生成剧情", x, y, C_MUTED, 10);
+        y += 14;
+
+        g.fill(x, y, px + PW - 16, y + 24, C_INPUT);
+        g.fill(x, y, px + PW - 16, y + 1, 0xFF44DDFF);
+        String display = promptText.isEmpty() ? "§7输入剧情描述..." : "§f" + promptText;
+        drawText(g, display, x + 4, y + 6, promptText.isEmpty() ? 0xFF666688 : C_TEXT, 10);
+        y += 30;
+
+        drawBtn(g, "▶ 生成剧情", cx - 55, y, 110, 26, mx, my, true);
+        y += 34;
+
+        drawBtn(g, "测试连接", x, y, 70, 18, mx, my, false);
+        drawBtn(g, "状态", x + 76, y, 50, 18, mx, my, false);
+        drawBtn(g, "自动", x + 132, y, 50, 18, mx, my, false);
+        drawBtn(g, "关闭", px + PW - 60, y, 44, 18, mx, my, false);
+
+        drawText(g, "§7AI Studio v0.1", px + PW - 80, py + 318, 0xFF555566, 8);
+
+        // 不调用 super.render() — 避免 Screen 默认的全屏模糊/暗色背景渲染
+    }
+
+    private int drawBtnRow(GuiGraphics g, int mx, int my, int x, int y, String[] labels, int[] w) {
+        int curX = x;
+        for (int i = 0; i < labels.length; i++) {
+            boolean hover = mx >= curX && mx <= curX + w[i] && my >= y && my <= y + 18;
+            g.fill(curX, y, curX + w[i], y + 18, hover ? C_BTN_H : C_BTN);
+            g.fill(curX, y, curX + w[i], y + 1, 0xFF4488CC);
+            drawText(g, labels[i], curX + (w[i] - font.width(labels[i])) / 2, y + 4, C_TEXT, 10);
+            curX += w[i] + 4;
+        }
+        return y + 20;
+    }
+
+    private void drawBtn(GuiGraphics g, String t, int x, int y, int w, int h, int mx, int my, boolean p) {
+        boolean hover = mx >= x && mx <= x + w && my >= y && my <= y + h;
+        g.fill(x, y, x + w, y + h, hover ? C_BTN_H : C_BTN);
+        g.fill(x, y, x + w, y + 1, p ? C_LINE : 0xFF4488CC);
+        drawText(g, t, x + (w - font.width(t)) / 2, y + (h - font.lineHeight) / 2, C_TEXT, p ? 12 : 10);
+    }
+
+    private void drawText(GuiGraphics g, String t, int x, int y, int c, int s) {
+        g.drawString(font, t, x, y, c, false);
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn != 0) return super.mouseClicked(mx, my, btn);
+        int x = px + 16, by = py + 80;
+        if (hit(mx, my, x, by, 90, 18)) { runCmd("story ai provider deepseek"); return true; }
+        if (hit(mx, my, x + 94, by, 90, 18)) { runCmd("story ai provider ollama"); return true; }
+        if (hit(mx, my, x + 188, by, 50, 18)) { runCmd("story ai enable"); return true; }
+        if (hit(mx, my, x + 242, by, 50, 18)) { runCmd("story ai disable"); return true; }
+        by += 20;
+        if (hit(mx, my, x, by, 85, 18)) { runCmd("story ai recommend zhipu"); return true; }
+        if (hit(mx, my, x + 89, by, 95, 18)) { runCmd("story ai recommend xunfei"); return true; }
+        if (hit(mx, my, x + 188, by, 55, 18)) { runCmd("story ai recommend groq"); return true; }
+        if (hit(mx, my, x + 247, by, 45, 18)) { runCmd("story ai recommend"); return true; }
+        by += 38;
+        if (hit(mx, my, x, by, 65, 18)) { runCmd("story ai temperature 0.6"); return true; }
+        if (hit(mx, my, x + 69, by, 65, 18)) { runCmd("story ai temperature 0.8"); return true; }
+        if (hit(mx, my, x + 138, by, 65, 18)) { runCmd("story ai temperature 1.0"); return true; }
+        if (hit(mx, my, x + 207, by, 35, 18)) { runCmd("story ai maxtokens 256"); return true; }
+        if (hit(mx, my, x + 246, by, 35, 18)) { runCmd("story ai maxtokens 2048"); return true; }
+        by += 38;
+        if (hit(mx, my, cx - 55, by, 110, 26)) { doGenerate(); return true; }
+        by += 34;
+        if (hit(mx, my, x, by, 70, 18)) { testConnection(); return true; }
+        if (hit(mx, my, x + 76, by, 50, 18)) { runCmd("story ai status"); return true; }
+        if (hit(mx, my, x + 132, by, 50, 18)) { runCmd("story ai autogen"); return true; }
+        if (hit(mx, my, px + PW - 60, by, 44, 18)) { onClose(); return true; }
+        return super.mouseClicked(mx, my, btn);
+    }
+
+    private boolean hit(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
+
+    @Override
+    public boolean keyPressed(int k, int s, int m) {
+        if (k == 256) { onClose(); return true; }
+        if (k == 257 || k == 335) { doGenerate(); return true; }
+        if (k == 259 && !promptText.isEmpty()) promptText = promptText.substring(0, promptText.length() - 1);
+        char c = (k >= 32 && k <= 126) ? (char) k : 0;
+        if (c != 0 && promptText.length() < 300) promptText += c;
+        return super.keyPressed(k, s, m);
     }
 
     private void doGenerate() {
-        String prompt = promptInput.getValue().trim();
-        if (prompt.isEmpty()) return;
+        if (promptText.isEmpty()) return;
         Minecraft.getInstance().setScreen(null);
         if (Minecraft.getInstance().player != null)
-            Minecraft.getInstance().player.connection.sendCommand("story ai generate " + prompt);
+            Minecraft.getInstance().player.connection.sendCommand("story ai generate " + promptText);
     }
 
     private void testConnection() {
@@ -180,13 +178,12 @@ public class AiControlScreen extends Screen {
             Minecraft.getInstance().player.connection.sendCommand(cmd);
     }
 
-    @Override
-    public boolean keyPressed(int k, int s, int m) {
-        if (k == 256) { onClose(); return true; }
-        if (k == 257 || k == 335) { doGenerate(); return true; }
-        return super.keyPressed(k, s, m);
-    }
-
     @Override public boolean shouldCloseOnEsc() { return true; }
     @Override public boolean isPauseScreen() { return false; }
+
+    // 阻止 Screen 默认的全屏模糊 — 面板本身有阴影，背景完全可见
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 空实现，不渲染模糊背景
+    }
 }
