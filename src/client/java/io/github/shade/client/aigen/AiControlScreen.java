@@ -119,29 +119,41 @@ public class AiControlScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (btn != 0) return super.mouseClicked(mx, my, btn);
-        int x = px + 16, by = py + 80;
+        int x = px + 16, by;
+
+        // Row 1: DeepSeek / Ollama / 启用 / 禁用 (y=py+94)
+        by = py + 94;
         if (hit(mx, my, x, by, 90, 18)) { runCmd("story ai provider deepseek"); return true; }
         if (hit(mx, my, x + 94, by, 90, 18)) { runCmd("story ai provider ollama"); return true; }
         if (hit(mx, my, x + 188, by, 50, 18)) { runCmd("story ai enable"); return true; }
         if (hit(mx, my, x + 242, by, 50, 18)) { runCmd("story ai disable"); return true; }
-        by += 20;
+
+        // Row 2: 智谱AI / 讯飞星火 / Groq / 更多 (y=py+116)
+        by = py + 116;
         if (hit(mx, my, x, by, 85, 18)) { runCmd("story ai recommend zhipu"); return true; }
         if (hit(mx, my, x + 89, by, 95, 18)) { runCmd("story ai recommend xunfei"); return true; }
         if (hit(mx, my, x + 188, by, 55, 18)) { runCmd("story ai recommend groq"); return true; }
         if (hit(mx, my, x + 247, by, 45, 18)) { runCmd("story ai recommend"); return true; }
-        by += 38;
+
+        // Row 3: 温度 / 短 / 长 (y=py+170)
+        by = py + 170;
         if (hit(mx, my, x, by, 65, 18)) { runCmd("story ai temperature 0.6"); return true; }
         if (hit(mx, my, x + 69, by, 65, 18)) { runCmd("story ai temperature 0.8"); return true; }
         if (hit(mx, my, x + 138, by, 65, 18)) { runCmd("story ai temperature 1.0"); return true; }
         if (hit(mx, my, x + 207, by, 35, 18)) { runCmd("story ai maxtokens 256"); return true; }
         if (hit(mx, my, x + 246, by, 35, 18)) { runCmd("story ai maxtokens 2048"); return true; }
-        by += 38;
+
+        // ▶ 生成剧情 (y=py+254)
+        by = py + 254;
         if (hit(mx, my, cx - 55, by, 110, 26)) { doGenerate(); return true; }
-        by += 34;
+
+        // Bottom row: 测试连接 / 状态 / 自动 / 关闭 (y=py+288)
+        by = py + 288;
         if (hit(mx, my, x, by, 70, 18)) { testConnection(); return true; }
         if (hit(mx, my, x + 76, by, 50, 18)) { runCmd("story ai status"); return true; }
         if (hit(mx, my, x + 132, by, 50, 18)) { runCmd("story ai autogen"); return true; }
         if (hit(mx, my, px + PW - 60, by, 44, 18)) { onClose(); return true; }
+
         return super.mouseClicked(mx, my, btn);
     }
 
