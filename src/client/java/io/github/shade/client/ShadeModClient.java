@@ -1,5 +1,6 @@
 package io.github.shade.client;
 
+import io.github.shade.client.aigen.AiControlScreen;
 import io.github.shade.client.story.StoryDialogScreen;
 import io.github.shade.client.story.StoryMenuScreen;
 import io.github.shade.client.story.StoryQuestOverlay;
@@ -14,7 +15,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class ShadeModClient implements ClientModInitializer {
 
-    private static KeyMapping storyMenuKey;
+    private static KeyMapping storyMenuKey, aiControlKey;
 
     @Override
     public void onInitializeClient() {
@@ -27,20 +28,24 @@ public class ShadeModClient implements ClientModInitializer {
     }
 
     private void registerKeybindings() {
-        // R 键 → 打开剧情菜单
         storyMenuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.shade.story_menu", GLFW.GLFW_KEY_R, "category.shade"));
 
+        // U 键 → 打开 AI 控制中心（独立于剧情菜单）
+        aiControlKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.shade.ai_control", GLFW.GLFW_KEY_U, "category.shade"));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (storyMenuKey.consumeClick()) {
-                // 请求打开剧情菜单
                 ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.openMenu());
+            }
+            if (aiControlKey.consumeClick()) {
+                client.setScreen(new AiControlScreen());
             }
         });
     }
 
     private void registerReceivers() {
-        // 对话框内容
         ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.StoryDialogPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
@@ -51,12 +56,10 @@ public class ShadeModClient implements ClientModInitializer {
                     });
                 });
 
-        // 剧情菜单
         ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.StoryMenuPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
-                        var client = context.client();
-                        client.setScreen(new StoryMenuScreen(payload));
+                        context.client().setScreen(new StoryMenuScreen(payload));
                     });
                 });
     }

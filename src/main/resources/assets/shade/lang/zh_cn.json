@@ -11,5 +11,7 @@
   "shade.story.list.header": "§6=== 可用剧情脚本 (§e%d§6) ===",
 
   "key.shade.resume": "打开剧情对话框",
+  "key.shade.story_menu": "打开剧情菜单",
+  "key.shade.ai_control": "打开 AI 控制中心",
   "category.shade": "Shade 模组"
 }
