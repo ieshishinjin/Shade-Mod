@@ -9,6 +9,7 @@ import net.minecraft.world.level.storage.LevelResource;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * AI 生成器配置 — 持久化到世界存档目录
@@ -90,14 +91,17 @@ public class AiConfig {
 
     public void save() {
         if (configPath == null) return;
-        try {
-            Files.createDirectories(configPath.getParent());
-            try (Writer writer = Files.newBufferedWriter(configPath)) {
-                new GsonBuilder().setPrettyPrinting().create().toJson(this, writer);
+        // 异步写文件，不阻塞服务端主线程
+        CompletableFuture.runAsync(() -> {
+            try {
+                Files.createDirectories(configPath.getParent());
+                try (Writer writer = Files.newBufferedWriter(configPath)) {
+                    new GsonBuilder().setPrettyPrinting().create().toJson(this, writer);
+                }
+            } catch (IOException e) {
+                ShadeMod.LOGGER.error("[ai] 保存配置失败", e);
             }
-        } catch (IOException e) {
-            ShadeMod.LOGGER.error("[ai] 保存配置失败", e);
-        }
+        });
     }
 
     // ==================== Getters & Setters ====================
