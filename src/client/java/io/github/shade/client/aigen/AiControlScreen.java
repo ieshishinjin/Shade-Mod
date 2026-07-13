@@ -33,18 +33,18 @@ public class AiControlScreen extends Screen {
         super.init();
         cx = width / 2;
         pw = Math.min(340, Math.max(200, width - 40));
-        ph = Math.min(370, height - 20);
+        ph = Math.min(340, height - 20);
         px = Math.max(2, cx - pw / 2);
         py = Math.max(2, (height - ph) / 2);
 
         int x = px + 14;
 
-        // 所有 y 坐标统一计算，render 和按钮用同一套
-        int y1 = py + 94;     // Row 1: DeepSeek / Ollama / 启用 / 禁用
-        int y2 = py + 113;    // Row 2: 智谱AI / 讯飞星火 / Groq / 更多
-        int y3 = py + 153;    // Row 3: 温度 / 短 / 长
-        int y4 = py + 218;    // ▶ 生成剧情
-        int y5 = py + 254;    // 底部操作栏
+        // 所有 y 坐标统一
+        int y1 = py + 83;     // Row 1: DeepSeek / Ollama / 启用 / 禁用
+        int y2 = py + 102;    // Row 2: 智谱AI / 讯飞星火 / Groq / 更多
+        int y3 = py + 144;    // Row 3: 温度 / 短 / 长
+        int y4 = py + 188;    // ▶ 生成剧情
+        int y5 = py + 226;    // 底部操作栏
 
         // Row 1
         addRenderableWidget(new ThemeButton(x, y1, 78, 16, "DeepSeek", C_ACCENT, C_TEXT, false, false,
@@ -66,7 +66,7 @@ public class AiControlScreen extends Screen {
         addRenderableWidget(new ThemeButton(x + 231, y2, 40, 16, "更多", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai recommend")));
 
-        // Row 3
+        // Row 3: 温度 / 短 / 长
         addRenderableWidget(new ThemeButton(x, y3, 62, 16, "温度0.6", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai temperature 0.6")));
         addRenderableWidget(new ThemeButton(x + 65, y3, 62, 16, "温度0.8", C_ACCENT, C_TEXT, false, false,
@@ -85,13 +85,13 @@ public class AiControlScreen extends Screen {
                 }));
 
         // 底部操作栏
-        int bw = Math.min(60, (pw - 42) / 4);
+        int bw = Math.min(54, (pw - 42) / 4);
         addRenderableWidget(new ThemeButton(x, y5, bw, 16, "测试连接", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai test")));
         addRenderableWidget(new ThemeButton(x + bw + 4, y5, bw, 16, "状态", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai status")));
-        addRenderableWidget(new ThemeButton(x + (bw + 4) * 2, y5, bw, 16, "自动", C_ACCENT, C_TEXT, false, false,
-                b -> runCmd("story ai autogen")));
+        addRenderableWidget(new ThemeButton(x + (bw + 4) * 2, y5, bw, 16, "设置", C_ACCENT, C_TEXT, false, false,
+                b -> Minecraft.getInstance().setScreen(new AiSettingsScreen())));
         addRenderableWidget(new ThemeButton(px + pw - 14 - bw, y5, bw, 16, "关闭", C_ACCENT, C_TEXT, false, false,
                 b -> onClose()));
     }
@@ -107,42 +107,39 @@ public class AiControlScreen extends Screen {
         g.fill(px, py, px + 3, py + ph, C_ACCENT);
 
         int x = px + 14;
-        int y;
 
-        // ═══════ 标题 ═══════
+        // ═══ 标题 ═══
         drawText(g, "✦ AI 剧情生成", x, py + 14, C_ACCENT);
         g.fill(x, py + 34, x + 36, py + 35, C_ACCENT);
 
-        // ═══════ 剧情进度 ═══════
+        // ═══ 剧情进度 ═══
         drawLabel(g, "剧情进度", x, py + 46, C_MUTED);
         drawText(g, "○ 第一章：苏醒  (进行中)", x + 2, py + 57, C_TEXT);
-        sep(g, x, py + 73);
+        sep(g, x, py + 72);
 
-        // ═══════ AI 引擎 ═══════
-        drawLabel(g, "AI 引擎", x, py + 83, C_MUTED);
-        // 按钮 Row 1-2 由 widget 在 py+94 / py+113 渲染
+        // ═══ AI 引擎 ═══
+        drawLabel(g, "AI 引擎", x, py + 73, C_MUTED);
 
-        // ═══════ 生成参数 ═══════
-        sep(g, x, py + 132);
-        drawLabel(g, "生成参数", x, py + 142, C_MUTED);
-        // 按钮 Row 3 由 widget 在 py+153 渲染
+        // ═══ 生成参数 ═══
+        sep(g, x, py + 122);
+        drawLabel(g, "生成参数", x, py + 132, C_MUTED);
 
-        // ═══════ 生成剧情 ═══════
-        sep(g, x, py + 172);
-        drawLabel(g, "生成剧情", x, py + 182, C_MUTED);
+        // ═══ 生成剧情 ═══
+        sep(g, x, py + 166);
+        drawLabel(g, "生成剧情", x, py + 176, C_MUTED);
 
         // 输入框
-        y = py + 193;
-        g.fill(x, y, px + pw - 14, y + 20, C_INPUT);
-        g.fill(x, y, px + pw - 14, y + 1, C_ACCENT);
+        int iy = py + 187;
+        g.fill(x, iy, px + pw - 14, iy + 20, C_INPUT);
+        g.fill(x, iy, px + pw - 14, iy + 1, C_ACCENT);
         String display = promptText.isEmpty() ? "输入剧情描述..." : promptText;
-        drawText(g, display, x + 5, y + 6, promptText.isEmpty() ? 0xFF5A5A7A : C_TEXT);
+        drawText(g, display, x + 5, iy + 6, promptText.isEmpty() ? 0xFF5A5A7A : C_TEXT);
 
         // 底部
-        sep(g, x, py + 246);
+        sep(g, x, py + 220);
         drawText(g, "AI Studio v0.1", px + pw - 76, py + ph - 11, 0xFF4A4A6A);
 
-        // 渲染按钮 widget
+        // 渲染 widget（按钮）
         super.render(g, mx, my, d);
     }
 
