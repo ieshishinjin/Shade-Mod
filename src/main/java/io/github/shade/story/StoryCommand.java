@@ -104,7 +104,10 @@ public class StoryCommand {
                         )
                         .then(literal("complete")
                                 .executes(StoryCommand::executeComplete)
-                        )
+                        )                        .then(literal("choose_reward")
+                                .then(argument("key", StringArgumentType.word())
+                                        .executes(StoryCommand::executeChooseReward)))
+
                         .then(literal("flag")
                                 .then(literal("set")
                                         .then(argument("key", StringArgumentType.word())
@@ -497,6 +500,16 @@ public class StoryCommand {
             }
         } catch (Exception ignored) {}
         return builder.buildFuture();
+    }
+
+
+    private static int executeChooseReward(CommandContext<CommandSourceStack> ctx) {
+        String key = StringArgumentType.getString(ctx, "key");
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            QuestManager.getInstance(player.serverLevel()).deliverChoiceReward(player, key);
+        } catch (CommandSyntaxException e) {}
+        return 1;
     }
 
     private static CompletableFuture<Suggestions> suggestScripts(

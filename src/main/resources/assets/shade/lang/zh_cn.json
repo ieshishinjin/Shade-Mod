@@ -9,9 +9,9 @@
   "shade.story.reload.success": "§a剧情脚本已重新加载",
   "shade.story.list.none": "§7没有可用的剧情脚本",
   "shade.story.list.header": "§6=== 可用剧情脚本 (§e%d§6) ===",
-
   "key.shade.resume": "打开剧情对话框",
   "key.shade.story_menu": "打开剧情菜单",
   "key.shade.ai_control": "打开 AI 控制中心",
-  "category.shade": "Shade 模组"
+  "category.shade": "Shade 模组",
+  "shade.quest.reward.choose": "\n§6✦ 选择一个奖励:"
 }

@@ -8,5 +8,6 @@
   "shade.story.reset.success": "§aStory progress reset",
   "shade.story.reload.success": "§aStory scripts reloaded",
   "shade.story.list.none": "§7No story scripts available",
-  "shade.story.list.header": "§6=== Available Stories (§e%d§6) ==="
+  "shade.story.list.header": "§6=== Available Stories (§e%d§6) ===",
+  "shade.quest.reward.choose": "\n§6✦ Choose a reward:"
 }

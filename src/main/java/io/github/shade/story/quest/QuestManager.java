@@ -229,7 +229,7 @@ public class QuestManager {
     }
 
     /**
-     * 发放 Quest 奖励
+     * 发放 Quest 奖励（支持随机池/多选一）
      */
     private void deliverRewards(ServerPlayer player, RuntimeQuest quest) {
         QuestRewardData rewards = quest.getRewards();
@@ -238,18 +238,29 @@ public class QuestManager {
         // 经验奖励
         if (rewards.getExp() > 0) {
             player.giveExperiencePoints(rewards.getExp());
-            ShadeMod.LOGGER.debug("[quest]  +{} 经验值", rewards.getExp());
+        }
+
+        // 多选一奖励 → 发送选择消息
+        if (rewards.getChoiceRewards() != null && !rewards.getChoiceRewards().isEmpty()) {
+            handleChoiceRewards(player, rewards);
+            // 多选一时跳过其他物品奖励
+            return;
+        }
+
+        // 获取实际要发放的物品（处理随机池）
+        List<String> deliverItems = rewards.getDeliveredItems(world.random);
+        if (deliverItems == null) {
+            deliverItems = rewards.getItems();
         }
 
         // 物品奖励
-        if (rewards.getItems() != null) {
-            for (String itemEntry : rewards.getItems()) {
+        if (deliverItems != null) {
+            for (String itemEntry : deliverItems) {
                 String[] parts = itemEntry.split(":");
                 String itemId;
                 int count = 1;
 
                 if (parts.length >= 3) {
-                    // namespace:path:count format
                     itemId = parts[0] + ":" + parts[1];
                     try { count = Integer.parseInt(parts[2]); } catch (NumberFormatException ignored) {}
                 } else if (parts.length == 2) {
@@ -263,7 +274,6 @@ public class QuestManager {
                 if (item != null) {
                     ItemStack stack = new ItemStack(item, count);
                     if (!player.getInventory().add(stack)) {
-                        // 背包满 → 掉落在玩家位置
                         world.addFreshEntity(new ItemEntity(
                                 world, player.getX(), player.getY(), player.getZ(), stack));
                     }
@@ -319,6 +329,46 @@ public class QuestManager {
     }
 
     // ==================== 查询方法 ====================
+
+    // ==================== 多选一奖励 ====================
+
+    private void handleChoiceRewards(ServerPlayer player, QuestRewardData rewards) {
+        var choices = rewards.getChoiceRewards();
+        if (choices == null || choices.isEmpty()) return;
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("shade.quest.reward.choose"));
+        int idx = 0;
+        for (var entry : choices.entrySet()) {
+            String label = entry.getKey();
+            String display = label.contains("|") ? label.split("\\|")[0] : label;
+            var msg = net.minecraft.network.chat.Component.literal("§e[" + (idx + 1) + "] §f" + display)
+                    .copy().withStyle(style -> style
+                            .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                    net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND,
+                                    "/story choose_reward " + entry.getKey())));
+            player.sendSystemMessage(msg);
+            idx++;
+        }
+    }
+
+    public void deliverChoiceReward(ServerPlayer player, String choiceKey) {
+        RuntimeQuest quest = getPrimaryQuest(player);
+        if (quest == null || quest.getRewards() == null || quest.getRewards().getChoiceRewards() == null) return;
+        var items = quest.getRewards().getChoiceRewards().get(choiceKey);
+        if (items == null) return;
+        for (String itemEntry : items) {
+            String[] parts = itemEntry.split(":");
+            String id = parts.length >= 3 ? parts[0] + ":" + parts[1] : (itemEntry.contains(":") ? itemEntry : "minecraft:" + itemEntry);
+            int count = 1;
+            if (parts.length >= 3) try { count = Integer.parseInt(parts[2]); } catch (Exception ignored) {}
+            var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(id));
+            if (item != null) {
+                ItemStack stack = new ItemStack(item, count);
+                if (!player.getInventory().add(stack)) world.addFreshEntity(new ItemEntity(world, player.getX(), player.getY(), player.getZ(), stack));
+            }
+        }
+        player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§a✔ 已选择: §f" + choiceKey));
+    }
+
 
     /**
      * 获取玩家的活跃 Quest 列表
