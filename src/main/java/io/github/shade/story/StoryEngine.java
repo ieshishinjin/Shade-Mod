@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import io.github.shade.ShadeMod;
+import io.github.shade.story.aigen.AiConfig;
+import io.github.shade.story.aigen.AutoStoryGenerator;
+import io.github.shade.story.aigen.StoryAiGenerator;
 import io.github.shade.story.model.*;
 import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
@@ -301,6 +304,9 @@ public class StoryEngine {
                 GalleryManager.getInstance(world).unlockByScript(player, state.currentScript);
                 ShadeMod.LOGGER.info("[story] 玩家 {} 完成剧情: {}",
                         player.getName().getString(), state.currentScript);
+
+                // 剧情完成 → 触发 AI 自动生成后续
+                AutoStoryGenerator.getInstance().onStoryCompleted(player);
             }
             activeStories.remove(player.getUUID());
         }
@@ -392,14 +398,34 @@ public class StoryEngine {
                     continue;
 
                 case AI_GENERATE:
-                    // AI 生成节点 — 异步触发 AI 生成
-                    // 向玩家发送生成中提示
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                            "§e✦ AI 正在生成剧情..."));
-                    // 异步触发 AI 生成（通过 AiCommand 或自动流程）
-                    // 引擎暂停，等待 AI 生成结果注入后继续
-                    ShadeMod.LOGGER.info("[story] 遇到 AI_GENERATE 节点，启动 AI 生成");
-                    return node; // 返回 AI_GENERATE 节点让调用方处理
+                    // AI 生成节点 — 自动触发 AI 生成
+                    AiConfig aiConfig = AiConfig.getInstance(world);
+                    if (aiConfig.isEnabled() && aiConfig.isAutoGenerate()) {
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                                "§e✦ AI 正在为你生成独特剧情，请稍候..."));
+                        ShadeMod.LOGGER.info("[story] 遇到 AI_GENERATE 节点，自动启动 AI 生成");
+
+                        // 触发自动生成（异步）
+                        AutoStoryGenerator.getInstance().onStoryCompleted(player);
+
+                        // 继续检查下一个节点（AI 生成后将自动注入并推进）
+                        if (node.getNext() != null && !node.getNext().isEmpty()) {
+                            state.currentNode = node.getNext();
+                            continue;
+                        }
+                    } else {
+                        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                                "§cAI 生成未启用或未配置。请使用 /story ai 配置"));
+                        ShadeMod.LOGGER.warn("[story] AI_GENERATE 节点但 AI 未启用");
+                    }
+
+                    // 如果没有启用，跳过该节点
+                    if (node.getNext() != null && !node.getNext().isEmpty()) {
+                        state.currentNode = node.getNext();
+                        continue;
+                    }
+                    endStory(player);
+                    return null;
 
                 case EVENT:
                     // 自动执行事件并继续

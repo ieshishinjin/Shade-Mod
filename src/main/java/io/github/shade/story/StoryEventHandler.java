@@ -4,6 +4,7 @@ import io.github.shade.ShadeMod;
 import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.story.aigen.AiConfig;
 import io.github.shade.story.aigen.AutoStoryGenerator;
+import io.github.shade.story.aigen.GenerationQueue;
 import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.event.PlayerEvents;
@@ -129,6 +130,9 @@ public class StoryEventHandler {
                     }
                 }
             }
+
+            // 自动剧情生成检测（每 100 tick = 5秒）
+            AutoStoryGenerator.getInstance().tick(level, server.getTickCount());
         }
     }
 
@@ -140,6 +144,10 @@ public class StoryEventHandler {
         TriggerManager.cleanupAll();
         GalleryManager.cleanupAll();
         AiConfig.cleanup();
+        GenerationQueue.cleanup();
+        AutoStoryGenerator.cleanup();
+        io.github.shade.story.aigen.PlayerStoryProfile.cleanupAll();
+        io.github.shade.story.aigen.StoryContextManager.cleanupAll();
     }
 
     // ==================== 游戏事件 → Quest 进度 ====================
