@@ -6,10 +6,13 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.shade.story.StoryEngine;
 import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.network.StoryPayloads;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -56,6 +59,7 @@ public class AiCommand {
                                 .then(literal("provider")
                                         .requires(s -> s.hasPermission(2))
                                         .then(argument("name", StringArgumentType.word())
+                                                .suggests(AiCommand::suggestProviders)
                                                 .executes(AiCommand::executeProvider)))
                                 .then(literal("key")
                                         .requires(s -> s.hasPermission(2))
@@ -90,6 +94,7 @@ public class AiCommand {
                                 .then(literal("recommend")
                                         .executes(AiCommand::executeRecommendList)
                                         .then(argument("provider", StringArgumentType.word())
+                                                .suggests(AiCommand::suggestRecommends)
                                                 .executes(ctx -> executeRecommendSelect(
                                                         ctx, StringArgumentType.getString(ctx, "provider")))
                                                 .then(literal("open")
@@ -437,5 +442,19 @@ public class AiCommand {
                 "  §7API Key 获取: §f" + provider.apiKeyHelp()), false);
 
         return 1;
+    }
+
+    // ==================== Tab 补全 ====================
+
+    private static CompletableFuture<Suggestions> suggestProviders(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(
+                java.util.List.of("deepseek", "ollama"), builder);
+    }
+
+    private static CompletableFuture<Suggestions> suggestRecommends(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(
+                java.util.List.of("zhipu", "xunfei", "deepseek", "mistral", "groq", "huggingface"), builder);
     }
 }

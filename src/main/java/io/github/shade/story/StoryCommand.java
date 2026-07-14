@@ -99,6 +99,7 @@ public class StoryCommand {
                         )
                         .then(literal("choose")
                                 .then(argument("index", IntegerArgumentType.integer(0))
+                                        .suggests(StoryCommand::suggestChoices)
                                         .executes(StoryCommand::executeChoose))
                         )
                         .then(literal("complete")
@@ -482,6 +483,21 @@ public class StoryCommand {
     }
 
     // ==================== 补全 ====================
+
+    private static CompletableFuture<Suggestions> suggestChoices(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            StoryEngine engine = StoryEngine.getInstance(player.serverLevel());
+            if (!engine.isInStory(player)) return Suggestions.empty();
+            StoryNode node = engine.getCurrentNode(player);
+            if (node == null || node.getOptions() == null) return Suggestions.empty();
+            for (int i = 0; i < node.getOptions().size(); i++) {
+                builder.suggest(String.valueOf(i), Component.literal(node.getOptions().get(i).getLabel()));
+            }
+        } catch (Exception ignored) {}
+        return builder.buildFuture();
+    }
 
     private static CompletableFuture<Suggestions> suggestScripts(
             CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {

@@ -34,7 +34,10 @@ public class CampCommand {
                 literal("camp")
                         .then(literal("create")
                                 .then(argument("name", word())
-                                        .executes(CampCommand::executeCreate))
+                                        .executes(CampCommand::executeCreate)
+                                        .then(argument("type", word())
+                                                .suggests(CampCommand::suggestTypes)
+                                                .executes(CampCommand::executeCreateWithType)))
                         )
                         .then(literal("delete")
                                 .then(argument("name", word())
@@ -94,7 +97,22 @@ public class CampCommand {
     // ==================== 命令执行 ====================
 
     private static int executeCreate(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        String name = getString(ctx, "name");
+        return createCamp(ctx, getString(ctx, "name"), null);
+    }
+
+    private static int executeCreateWithType(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        String typeStr = getString(ctx, "type").toUpperCase();
+        Camp.Type type;
+        try {
+            type = Camp.Type.valueOf(typeStr);
+        } catch (IllegalArgumentException e) {
+            ctx.getSource().sendFailure(Component.literal("§c无效类型，可用: NORMAL, BOSS, RESOURCE, PUZZLE"));
+            return 0;
+        }
+        return createCamp(ctx, getString(ctx, "name"), type);
+    }
+
+    private static int createCamp(CommandContext<CommandSourceStack> ctx, String name, Camp.Type type) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         ServerLevel world = player.serverLevel();
         CampManager manager = CampManager.getInstance(world);
@@ -111,11 +129,17 @@ public class CampCommand {
             return 0;
         }
 
+        if (type != null) {
+            camp.setType(type);
+            manager.save();
+        }
+
+        String typeDisplay = type != null ? " §8[" + type.name() + "§8]" : "";
         int spawnCount = camp.getSafeSpawnPoints() != null ? camp.getSafeSpawnPoints().size() : 0;
         String biomeName = CampRandomizer.getBiomeDisplayName(world.getBiome(player.blockPosition()));
 
         ctx.getSource().sendSuccess(() ->
-                Component.translatable("shadecamp.camp.create.success", name), true);
+                Component.literal("§a✔ 据点 " + camp.getName() + " 已创建" + typeDisplay), true);
         ctx.getSource().sendSuccess(() ->
                 Component.translatable("shadecamp.camp.create.info", biomeName, spawnCount, formatMobConfig(camp.getMobConfig())), true);
 
@@ -354,6 +378,12 @@ public class CampCommand {
     }
 
     // ==================== 参数补全 ====================
+
+    private static CompletableFuture<Suggestions> suggestTypes(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(
+                java.util.stream.Stream.of(Camp.Type.values()).map(Enum::name), builder);
+    }
 
     private static CompletableFuture<Suggestions> suggestCamps(
             CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
