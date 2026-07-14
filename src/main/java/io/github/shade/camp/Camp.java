@@ -108,12 +108,24 @@ public class Camp {
         if (bossBar == null) {
             bossBar = new ServerBossEvent(
                     makeBossBarTitle(0),
-                    BossEvent.BossBarColor.GREEN,
+                    getBossBarColorForType(),
                     BossEvent.BossBarOverlay.PROGRESS
             );
             bossBar.setVisible(true);
         }
         return bossBar;
+    }
+
+    /**
+     * 根据营地类型返回 BossBar 颜色
+     */
+    private BossEvent.BossBarColor getBossBarColorForType() {
+        return switch (type) {
+            case BOSS -> BossEvent.BossBarColor.RED;
+            case RESOURCE -> BossEvent.BossBarColor.YELLOW;
+            case PUZZLE -> BossEvent.BossBarColor.PURPLE;
+            default -> BossEvent.BossBarColor.GREEN;
+        };
     }
 
     /**
