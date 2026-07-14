@@ -66,7 +66,7 @@ public class GenerationQueue {
 
         // 加入队列
         queue.put(uuid, new QueuedRequest(task, reason, now));
-        ShadeMod.LOGGER.info("[ai-queue] 玩家 {} 加入生成队列: {} (队列大小: {})",
+        ShadeMod.LOGGER.debug("[ai-queue] 玩家 {} 加入生成队列: {}",
                 player.getName().getString(), reason, queue.size());
 
         processQueue();

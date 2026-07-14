@@ -20,14 +20,14 @@ public class CampEventHandler {
         if (registered) return;
         registered = true;
 
-        ShadeMod.LOGGER.info("[shadecamp] ===== 注册事件监听器 =====");
+        ShadeMod.LOGGER.debug("[shadecamp] ===== 注册事件监听器 =====");
         ServerLifecycleEvents.SERVER_STARTED.register(CampEventHandler::onServerStarted);
         ServerTickEvents.END_SERVER_TICK.register(CampEventHandler::onServerTick);
         ServerLifecycleEvents.SERVER_STOPPING.register(CampEventHandler::onServerStopping);
     }
 
     private static void onServerStarted(MinecraftServer server) {
-        ShadeMod.LOGGER.info("[shadecamp] ===== 关闭原版刷怪，启用据点系统 =====");
+        ShadeMod.LOGGER.debug("[shadecamp] ===== 关闭原版刷怪，启用据点系统 =====");
 
         for (ServerLevel level : server.getAllLevels()) {
             try {
@@ -35,10 +35,10 @@ public class CampEventHandler {
 
                 // 关闭原版自然刷怪
                 level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING).set(false, server);
-                ShadeMod.LOGGER.info("[shadecamp] doMobSpawning=false (原版刷怪已禁用)");
+                ShadeMod.LOGGER.debug("[shadecamp] doMobSpawning=false (原版刷怪已禁用)");
 
                 CampManager campManager = CampManager.getInstance(level);
-                ShadeMod.LOGGER.info("[shadecamp] 种子={}", level.getSeed());
+                ShadeMod.LOGGER.debug("[shadecamp] 种子={}", level.getSeed());
 
                 // 生成据点候选
                 List<BlockPos> candidates = new ArrayList<>();
@@ -79,7 +79,7 @@ public class CampEventHandler {
                 }
 
                 campManager.addPendingCamps(candidates);
-                ShadeMod.LOGGER.info("[shadecamp] 已添加 {} 个据点候选", candidates.size());
+                ShadeMod.LOGGER.debug("[shadecamp] 已添加 {} 个据点候选", candidates.size());
             } catch (Exception e) {
                 ShadeMod.LOGGER.error("[shadecamp] 初始化异常", e);
             }
@@ -107,7 +107,7 @@ public class CampEventHandler {
                 campManager.tick();
                 int after = campManager.getCampCount();
                 if (before == 0 && after > 0) {
-                    ShadeMod.LOGGER.info("[shadecamp] 首批 {} 个据点已创建", after);
+                    ShadeMod.LOGGER.debug("[shadecamp] 首批 {} 个据点已创建", after);
                 }
             }
         } catch (Exception e) {

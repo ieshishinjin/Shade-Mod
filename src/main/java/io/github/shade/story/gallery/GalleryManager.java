@@ -91,7 +91,7 @@ public class GalleryManager {
 
         unlocked.add(entryId);
         save(player);
-        ShadeMod.LOGGER.info("[gallery] 玩家 {} 解锁: {} ({})",
+        ShadeMod.LOGGER.debug("[gallery] 玩家 {} 解锁: {} ({})",
                 player.getName().getString(),
                 galleryDefs.get(entryId).getTitle(), entryId);
 

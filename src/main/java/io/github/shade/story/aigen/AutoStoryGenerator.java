@@ -213,7 +213,7 @@ public class AutoStoryGenerator {
         lastGenerationTime.put(player.getUUID(), System.currentTimeMillis());
         PlayerStoryProfile.get(player.getUUID()).setLastGenerationTick(level.getGameTime());
 
-        ShadeMod.LOGGER.info("[auto-gen] 触发自动生成: 玩家={}, 原因={}",
+        ShadeMod.LOGGER.debug("[auto-gen] 触发自动生成: 玩家={}, 原因={}",
                 player.getName().getString(), reason);
 
         // 向玩家发送提示

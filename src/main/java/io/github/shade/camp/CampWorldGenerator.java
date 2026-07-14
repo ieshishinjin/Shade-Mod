@@ -96,7 +96,7 @@ public class CampWorldGenerator {
         camp.setMobConfig(mobConfig);
 
         manager.addCamp(camp);
-        ShadeMod.LOGGER.info("[shadecamp] ★ 据点 '{}' @ {} | {} 只怪物", name, pos.toShortString(),
+        ShadeMod.LOGGER.debug("[shadecamp] ★ 据点 '{}' @ {} | {} 只怪物", name, pos.toShortString(),
                 mobConfig.values().stream().mapToInt(Integer::intValue).sum());
         return camp;
     }

@@ -87,7 +87,7 @@ public class TriggerManager {
                     triggers.put(t.getId(), t);
                 }
             }
-            ShadeMod.LOGGER.info("[trigger] 已加载 {} 个触发器", triggers.size());
+            ShadeMod.LOGGER.debug("[trigger] 已加载 {} 个触发器", triggers.size());
         } catch (IOException e) {
             ShadeMod.LOGGER.error("[trigger] 加载触发器失败", e);
         }

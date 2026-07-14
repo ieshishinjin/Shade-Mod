@@ -54,10 +54,7 @@ public class InventoryTracker {
 
                 if (currentCount > lastCount) {
                     int delta = currentCount - lastCount;
-                    ShadeMod.LOGGER.debug("[inventory] 玩家 {} 获得: {} ×{}",
-                            player.getName().getString(), itemId, delta);
-
-                    // 通知 Quest 系统
+                    // 通知 Quest 系统（日志已移除，减少控制台输出）
                     AdapterRegistry.notifyProgress(player, "COLLECT_ITEM", itemId, delta);
                 }
             }

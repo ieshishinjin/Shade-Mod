@@ -53,8 +53,7 @@ public class ZoneTracker {
                 Math.max(x1, x2), Math.max(z1, z2)
         );
         zones.put(name, zone);
-        ShadeMod.LOGGER.info("[zone] 添加区域: {} ({}°, {}° → {}°, {}°)",
-                name, zone.x1, zone.z1, zone.x2, zone.z2);
+        ShadeMod.LOGGER.debug("[zone] 添加区域: {}", name);
     }
 
     /**

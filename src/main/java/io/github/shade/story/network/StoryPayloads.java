@@ -120,7 +120,7 @@ public class StoryPayloads {
         PayloadTypeRegistry.playS2C().register(QuestSyncPayload.TYPE, QuestSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryActionPayload.TYPE, StoryActionPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
-        ShadeMod.LOGGER.info("[story] 网络包已注册");
+        ShadeMod.LOGGER.debug("[story] 网络包已注册");
     }
 
     private static void handlePlayerAction(ServerPlayer player, StoryActionPayload payload) {

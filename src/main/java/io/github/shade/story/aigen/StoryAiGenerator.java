@@ -198,7 +198,7 @@ public class StoryAiGenerator {
             }
         }
 
-        ShadeMod.LOGGER.info("[ai] 注入 {} 个 AI 生成节点到脚本 '{}'",
+        ShadeMod.LOGGER.debug("[ai] 注入 {} 个 AI 生成节点到脚本 '{}'",
                 generateResult.getNodes().size(), scriptId);
         return firstNode;
     }

@@ -91,7 +91,7 @@ public class QuestManager {
             // 收到适配器进度事件 → 更新匹配的 Quest
             onObjectiveProgress(player, event.objectiveType(), event.targetId(), event.delta());
         });
-        ShadeMod.LOGGER.info("[quest] QuestManager 已启动并注册事件监听");
+        ShadeMod.LOGGER.debug("[quest] QuestManager 已启动并注册事件监听");
     }
 
     // ==================== Quest 生命周期 ====================

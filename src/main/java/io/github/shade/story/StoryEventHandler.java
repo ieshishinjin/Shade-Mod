@@ -36,7 +36,7 @@ public class StoryEventHandler {
         if (registered) return;
         registered = true;
 
-        ShadeMod.LOGGER.info("[story] 注册故事系统事件监听器");
+        ShadeMod.LOGGER.debug("[story] 注册故事系统事件监听器");
 
         ServerLifecycleEvents.SERVER_STARTED.register(StoryEventHandler::onServerStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(StoryEventHandler::onServerStopping);
@@ -94,7 +94,7 @@ public class StoryEventHandler {
     }
 
     private static void onServerStarted(MinecraftServer server) {
-        ShadeMod.LOGGER.info("[story] ===== 初始化故事系统 =====");
+        ShadeMod.LOGGER.debug("[story] ===== 初始化故事系统 =====");
 
         for (ServerLevel level : server.getAllLevels()) {
             if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;

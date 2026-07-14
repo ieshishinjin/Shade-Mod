@@ -96,7 +96,7 @@ public class CampManager {
     public void load() {
         camps.clear();
         if (!Files.exists(saveFile)) {
-            ShadeMod.LOGGER.info("未找到据点数据文件，将创建新文件: {}", saveFile);
+            ShadeMod.LOGGER.debug("未找到据点数据文件，将创建新文件: {}", saveFile);
             save(); // 创建默认文件
             return;
         }
@@ -110,7 +110,7 @@ public class CampManager {
                     camps.put(camp.getName(), camp);
                 }
             }
-            ShadeMod.LOGGER.info("已加载 {} 个据点", camps.size());
+            ShadeMod.LOGGER.debug("已加载 {} 个据点", camps.size());
         } catch (IOException e) {
             ShadeMod.LOGGER.error("加载据点数据失败", e);
         }
@@ -452,14 +452,14 @@ public class CampManager {
                 }
             }
         }
-        ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 预生成 {} 只怪物，散布在 {} 个位置",
+        ShadeMod.LOGGER.debug("[shadecamp] 据点 '{}' 预生成 {} 只怪物，散布在 {} 个位置",
                 camp.getName(), spawnedCount, spawnPoints.size());
         save();
     }
 
     /** 玩家进入范围，激活闲置怪物 */
     private void aggroMobs(Camp camp) {
-        ShadeMod.LOGGER.info("[shadecamp] 据点 '{}' 怪物被激活！", camp.getName());
+        ShadeMod.LOGGER.debug("[shadecamp] 据点 '{}' 怪物被激活！", camp.getName());
         ServerPlayer nearest = findNearestPlayer(camp);
 
         for (Entity entity : camp.getActiveEntities()) {
@@ -511,7 +511,7 @@ public class CampManager {
 
             double distSq = player.distanceToSqr(campPos.getX() + 0.5, campPos.getY() + 0.5, campPos.getZ() + 0.5);
             if (distSq <= rangeSq) {
-                ShadeMod.LOGGER.info(
+                ShadeMod.LOGGER.debug(
                         "[shadecamp] 玩家 {} 进入据点 {} 范围 ({} < {})",
                         player.getName().getString(),
                         camp.getName(),
@@ -625,7 +625,7 @@ public class CampManager {
 
         int worldLevel = WorldLevel.getLevel(world);
         if (worldLevel > 0) {
-            ShadeMod.LOGGER.info("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.getName(worldLevel));
+            ShadeMod.LOGGER.debug("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.getName(worldLevel));
         }
 
         for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {

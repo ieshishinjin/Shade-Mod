@@ -39,7 +39,7 @@ public class AdapterRegistry {
      */
     public static void register(SystemAdapter adapter) {
         ADAPTERS.put(adapter.getSystemId(), adapter);
-        ShadeMod.LOGGER.info("[adapter] 已注册适配器: {} (类型: {})",
+        ShadeMod.LOGGER.debug("[adapter] 已注册适配器: {} (类型: {})",
                 adapter.getSystemId(),
                 String.join(", ", adapter.getSupportedObjectiveTypes()));
     }

@@ -125,7 +125,7 @@ public class StoryEngine {
             ShadeMod.LOGGER.error("[story] classpath 扫描失败", e);
         }
 
-        ShadeMod.LOGGER.info("[story] 已加载 {} 个剧情脚本", loaded);
+        ShadeMod.LOGGER.debug("[story] 已加载 {} 个剧情脚本", loaded);
     }
 
     /**
@@ -139,7 +139,7 @@ public class StoryEngine {
                     script.setId(fileName.replace(".json", ""));
                 }
                 scripts.put(script.getId(), script);
-                ShadeMod.LOGGER.info("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
+                ShadeMod.LOGGER.debug("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
                 return true;
             } else {
                 ShadeMod.LOGGER.warn("[story] 脚本格式无效: {}", fileName);
@@ -164,7 +164,7 @@ public class StoryEngine {
                     script.setId(fileName.replace(".json", ""));
                 }
                 scripts.put(script.getId(), script);
-                ShadeMod.LOGGER.info("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
+                ShadeMod.LOGGER.debug("[story] 加载脚本: {} ({})", script.getId(), script.getTitle());
                 return script;
             }
         } catch (IOException | JsonSyntaxException e) {
@@ -179,7 +179,7 @@ public class StoryEngine {
     public void reloadScript(String scriptId) {
         // 从资源中重新加载
         loadScripts();
-        ShadeMod.LOGGER.info("[story] 热加载完成: {}", scriptId);
+        ShadeMod.LOGGER.debug("[story] 热加载完成: {}", scriptId);
     }
 
     /**
@@ -403,7 +403,7 @@ public class StoryEngine {
                     if (aiConfig.isEnabled() && aiConfig.isAutoGenerate()) {
                         player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                                 "§e✦ AI 正在为你生成独特剧情，请稍候..."));
-                        ShadeMod.LOGGER.info("[story] 遇到 AI_GENERATE 节点，自动启动 AI 生成");
+                        ShadeMod.LOGGER.debug("[story] 遇到 AI_GENERATE 节点，自动启动 AI 生成");
 
                         // 触发自动生成（异步）
                         AutoStoryGenerator.getInstance().onStoryCompleted(player);
@@ -448,7 +448,7 @@ public class StoryEngine {
                         QuestManager qm = QuestManager.getInstance(world);
                         RuntimeQuest quest = qm.startQuest(player, node.getQuest());
                         if (quest != null) {
-                            ShadeMod.LOGGER.info("[story] 玩家 {} 接受 Quest: {}",
+                            ShadeMod.LOGGER.debug("[story] 玩家 {} 接受 Quest: {}",
                                     player.getName().getString(), quest.getQuestName());
                         }
                     }
