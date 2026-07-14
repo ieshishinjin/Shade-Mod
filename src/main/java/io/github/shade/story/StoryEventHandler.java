@@ -45,7 +45,12 @@ public class StoryEventHandler {
         ServerTickEvents.END_SERVER_TICK.register(StoryEventHandler::onServerTick);
 
         // 玩家加入/离开
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {});
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            var player = handler.getPlayer();
+            if (player != null && !player.isSpectator()) {
+                server.execute(() -> handlePlayerJoin(player));
+            }
+        });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             var player = handler.getPlayer();
             if (player != null) {
@@ -226,6 +231,48 @@ public class StoryEventHandler {
                 player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                         "§c对话生成失败: " + result.getError()));
             }
+        });
+    }
+
+    // ==================== 玩家引导教程 ====================
+
+    /**
+     * 新玩家加入时触发引导教程
+     */
+    private static void handlePlayerJoin(ServerPlayer player) {
+        var world = player.serverLevel();
+        var progress = io.github.shade.story.StoryManager.getInstance(world).getProgress(player);
+
+        // 检查是否是首次加入（没有已完成脚本）
+        if (!progress.getCompletedScripts().isEmpty()) return;
+        if (progress.getFlags().containsKey("tutorial_shown")) return;
+
+        // 标记已显示引导
+        progress.getFlags().put("tutorial_shown", true);
+        io.github.shade.story.StoryManager.getInstance(world).save(player);
+
+        // 延迟 3 秒后发送引导消息（等待客户端加载完成）
+        world.getServer().execute(() -> {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "\n§6✦ §l欢迎使用 Shade Mod!"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §7这是一个集成了 Galgame 剧情、AI 生成和据点战斗的模组。"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §7以下是一些快速入门指南：\n"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §eR §7- 打开剧情菜单"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §eU §7- AI 剧情控制面板"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §eL §7- 打开任务日志"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §eShift+右键 §7- 与 NPC 对话"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §e/camp list §7- 查看附近据点"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §e/story list §7- 查看所有剧本"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §e/story ai recommend §7- 配置免费 AI\n"));
         });
     }
 
