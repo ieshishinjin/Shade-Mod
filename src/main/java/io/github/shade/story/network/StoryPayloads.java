@@ -6,6 +6,9 @@ import io.github.shade.story.StoryManager;
 import io.github.shade.story.model.StoryChoice;
 import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.model.StoryScript;
+import io.github.shade.story.quest.QuestManager;
+import io.github.shade.story.quest.RuntimeQuest;
+import io.github.shade.story.quest.RuntimeObjective;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -112,15 +115,87 @@ public class StoryPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // === 任务日志包 (S2C) ===
+
+    public record QuestLogPayload(List<QuestLogEntry> activeQuests, List<String> completedQuestIds) implements CustomPacketPayload {
+        public record QuestLogEntry(String questName, String questDescription, String[] objectiveTexts, int[] progress, int[] maxProgress) {}
+        public static final CustomPacketPayload.Type<QuestLogPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:quest_log"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, QuestLogPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeCollection(p.activeQuests, (b, e) -> {
+                        b.writeUtf(e.questName, 256); b.writeUtf(e.questDescription, 512);
+                        b.writeVarInt(e.objectiveTexts.length);
+                        for (String t : e.objectiveTexts) b.writeUtf(t, 512);
+                        for (int v : e.progress) b.writeVarInt(v);
+                        for (int v : e.maxProgress) b.writeVarInt(v);
+                    });
+                    buf.writeCollection(p.completedQuestIds, (b, id) -> b.writeUtf(id, 128));
+                },
+                buf -> {
+                    List<QuestLogEntry> active = buf.readList(b -> {
+                        String name = b.readUtf(256); String desc = b.readUtf(512);
+                        int len = b.readVarInt();
+                        String[] texts = new String[len]; int[] prog = new int[len]; int[] maxP = new int[len];
+                        for (int i = 0; i < len; i++) texts[i] = b.readUtf(512);
+                        for (int i = 0; i < len; i++) prog[i] = b.readVarInt();
+                        for (int i = 0; i < len; i++) maxP[i] = b.readVarInt();
+                        return new QuestLogEntry(name, desc, texts, prog, maxP);
+                    });
+                    return new QuestLogPayload(active, buf.readList(b -> b.readUtf(128)));
+                });
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求任务日志 (C2S) ===
+
+    public record QuestLogRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<QuestLogRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:quest_log_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, QuestLogRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new QuestLogRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // === 注册与处理 ===
 
     public static void register() {
         PayloadTypeRegistry.playS2C().register(StoryDialogPayload.TYPE, StoryDialogPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoryMenuPayload.TYPE, StoryMenuPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(QuestSyncPayload.TYPE, QuestSyncPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(QuestLogPayload.TYPE, QuestLogPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryActionPayload.TYPE, StoryActionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(QuestLogRequestPayload.TYPE, QuestLogRequestPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
+        ServerPlayNetworking.registerGlobalReceiver(QuestLogRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendQuestLogToClient(ctx.player())));
         ShadeMod.LOGGER.debug("[story] 网络包已注册");
+    }
+
+    /**
+     * 发送任务日志到客户端
+     */
+    public static void sendQuestLogToClient(ServerPlayer player) {
+        QuestManager qm = QuestManager.getInstance(player.serverLevel());
+        var active = qm.getActiveQuests(player);
+        var completed = qm.getCompletedQuestIds(player);
+
+        List<QuestLogPayload.QuestLogEntry> entries = new ArrayList<>();
+        for (RuntimeQuest q : active) {
+            var objs = q.getObjectives();
+            int n = objs.size();
+            String[] texts = new String[n];
+            int[] prog = new int[n];
+            int[] maxP = new int[n];
+            for (int i = 0; i < n; i++) {
+                texts[i] = objs.get(i).getDisplayText();
+                prog[i] = objs.get(i).getProgress();
+                maxP[i] = objs.get(i).getTargetCount();
+            }
+            entries.add(new QuestLogPayload.QuestLogEntry(
+                    q.getQuestName(), q.getQuestDescription(), texts, prog, maxP));
+        }
+
+        ServerPlayNetworking.send(player, new QuestLogPayload(entries, new ArrayList<>(completed)));
     }
 
     private static void handlePlayerAction(ServerPlayer player, StoryActionPayload payload) {

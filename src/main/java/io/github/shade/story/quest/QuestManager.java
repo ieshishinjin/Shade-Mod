@@ -311,6 +311,13 @@ public class QuestManager {
                 "§a✦ §l任务完成: §r§f" + quest.getQuestName()));
     }
 
+    /**
+     * 获取玩家已完成的所有 Quest ID
+     */
+    public Set<String> getCompletedQuestIds(ServerPlayer player) {
+        return completedQuestIds.getOrDefault(player.getUUID(), Collections.emptySet());
+    }
+
     // ==================== 查询方法 ====================
 
     /**
