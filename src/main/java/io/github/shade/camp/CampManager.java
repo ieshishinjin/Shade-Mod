@@ -502,6 +502,24 @@ public class CampManager {
             }
         }
 
+        // 动态事件：已清空据点可能有概率被重新占领（远处的据点）
+        if (camp.getStatus() == Camp.Status.CLEARED && camp.getRefreshTime() == 0) {
+            long clearedDuration = gameTime - camp.getLastClearedTime();
+            // 超过 12000 tick（10分钟）后，每 600 tick（30秒）有 2% 几率重新占领
+            if (clearedDuration > 12000 && (gameTime % 600 == 0)) {
+                if (world.random.nextFloat() < 0.02f) {
+                    ShadeMod.LOGGER.info("[shadecamp] 据点 {} 被重新占领！", camp.getName());
+                    resetCamp(camp.getName());
+                    // 通知附近玩家
+                    for (ServerPlayer p : getPlayersInRange(camp)) {
+                        p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                                "§c⚔ " + camp.getName() + " 被怪物重新占领了！"));
+                    }
+                    return;
+                }
+            }
+        }
+
         // === 玩家靠近时生成/激活怪物 ===
         BlockPos campPos = camp.getBlockPos();
         double rangeSq = camp.getTriggerRange() * camp.getTriggerRange();
@@ -733,6 +751,9 @@ public class CampManager {
         camp.clearActiveEntities();
 
         // 按怪物数量分等级生成宝箱
+        // 营地联动：清空当前据点后，附近据点获得增强
+        reinforceNearbyCamps(camp);
+
         CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount(), WorldLevel.getLevel(world));
         CampRewardHandler.spawnRewardChest(world, camp, tier);
 
@@ -742,6 +763,50 @@ public class CampManager {
         }
 
         save();
+    }
+
+    /**
+     * 营地联动：清空一个据点后，附近 50 格内的其他据点被增强
+     * （怪物数量 +50%，触发范围 +4 格）
+     */
+    private void reinforceNearbyCamps(Camp clearedCamp) {
+        BlockPos clearedPos = clearedCamp.getBlockPos();
+        int count = 0;
+
+        for (Camp other : camps.values()) {
+            if (other == clearedCamp) continue;
+            if (other.getStatus() != Camp.Status.IDLE) continue;
+
+            BlockPos otherPos = other.getBlockPos();
+            double dist = clearedPos.distSqr(otherPos);
+            if (dist > 50 * 50) continue; // 仅影响 50 格内的营地
+
+            // 增强怪物配置：每个种类 +1
+            var mobConfig = new LinkedHashMap<>(other.getMobConfig());
+            for (var entry : mobConfig.entrySet()) {
+                mobConfig.put(entry.getKey(), entry.getValue() + 1);
+            }
+            other.setMobConfig(mobConfig);
+
+            // 扩大触发范围
+            other.setTriggerRange(other.getTriggerRange() + 4);
+
+            count++;
+
+            // 通知附近玩家
+            String msg = "§c⚔ " + other.getName() + " 似乎感受到了威胁，怪物变得更加活跃了！";
+            for (ServerPlayer player : world.players()) {
+                double playerDist = player.distanceToSqr(otherPos.getX(), otherPos.getY(), otherPos.getZ());
+                if (playerDist < 100 * 100) {
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal(msg));
+                }
+            }
+        }
+
+        if (count > 0) {
+            ShadeMod.LOGGER.debug("[shadecamp] {} 触发营地联动，{} 个附近据点被增强",
+                    clearedCamp.getName(), count);
+        }
     }
 
     // ==================== 辅助方法 ====================

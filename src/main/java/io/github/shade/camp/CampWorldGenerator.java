@@ -2,7 +2,9 @@ package io.github.shade.camp;
 
 import io.github.shade.ShadeMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.*;
@@ -66,39 +68,169 @@ public class CampWorldGenerator {
         List<BlockPos> spawnPoints = new ArrayList<>();
         spawnPoints.add(pos);
 
+        Random rand = new Random(world.getSeed() + pos.asLong());
+        int distanceFromSpawn = (int) Math.sqrt(x * x + z * z);
+
+        // 确定据点类型：远处更可能出现特殊类型
+        Camp.Type type = determineCampType(rand, distanceFromSpawn);
+
         // 生成名称
-        String[] pre = {"废弃", "破旧", "荒芜", "隐秘", "古老", "幽暗"};
-        String name = pre[new Random(world.getSeed() + x * 31L + z * 37L).nextInt(pre.length)] + "营地";
+        String name = generateCampName(rand, type);
 
         Camp camp = new Camp(name, pos);
+        camp.setType(type);
         camp.setSafeSpawnPointsFromBlocks(spawnPoints);
 
-        // 随机怪物配置（基于群系）
-        List<String> mobPool = CampRandomizer.getMobPoolForBiome(biome);
-        Random rand = new Random(world.getSeed() + pos.asLong());
+        // 根据类型配置怪物和战利品
+        switch (type) {
+            case BOSS -> configureBossCamp(camp, world, biome, rand, distanceFromSpawn);
+            case RESOURCE -> configureResourceCamp(camp, world, biome, rand);
+            case PUZZLE -> configurePuzzleCamp(camp, world, biome, rand);
+            default -> configureNormalCamp(camp, world, biome, rand);
+        }
 
-        Map<String, Integer> mobConfig = new LinkedHashMap<>();
+        manager.addCamp(camp);
+        ShadeMod.LOGGER.debug("[shadecamp] {} '{}' @ {} | {} 只怪物",
+                type, name, pos.toShortString(),
+                camp.getMobConfig().values().stream().mapToInt(Integer::intValue).sum());
+        return camp;
+    }
+
+    /**
+     * 根据距离确定据点类型
+     */
+    private static Camp.Type determineCampType(Random rand, int distanceFromSpawn) {
+        // 靠近出生点：大多为普通
+        if (distanceFromSpawn < 500) {
+            return rand.nextDouble() < 0.15 ? Camp.Type.RESOURCE : Camp.Type.NORMAL;
+        }
+        // 中距离：可能出现资源营地和谜题营地
+        double r = rand.nextDouble();
+        if (r < 0.10) return Camp.Type.BOSS;
+        if (r < 0.25) return Camp.Type.PUZZLE;
+        if (r < 0.40) return Camp.Type.RESOURCE;
+        return Camp.Type.NORMAL;
+    }
+
+    /**
+     * 生成据点名称
+     */
+    private static String generateCampName(Random rand, Camp.Type type) {
+        String[] pre = {"废弃", "破旧", "荒芜", "隐秘", "古老", "幽暗"};
+        String[] bossPre = {"血腥", "恶魔", "诅咒", "黑暗", "邪教"};
+        String[] resourcePre = {"富饶", "矿藏", "资源", "物资", "补给"};
+        String[] puzzlePre = {"谜之", "机关", "迷宫", "封印", "神秘"};
+
+        return switch (type) {
+            case BOSS -> bossPre[rand.nextInt(bossPre.length)] + "营寨";
+            case RESOURCE -> resourcePre[rand.nextInt(resourcePre.length)] + "矿场";
+            case PUZZLE -> puzzlePre[rand.nextInt(puzzlePre.length)] + "遗迹";
+            default -> pre[rand.nextInt(pre.length)] + "营地";
+        };
+    }
+
+    /**
+     * 配置普通营地
+     */
+    private static void configureNormalCamp(Camp camp, ServerLevel world,
+                                             Holder<net.minecraft.world.level.biome.Biome> biome, Random rand) {
+        List<String> mobPool = CampRandomizer.getMobPoolForBiome(biome);
+        camp.setMobConfig(generateMobConfig(mobPool, rand, 3, 8));
+        camp.setLootTable(Camp.CAMP_ID + ":chests/camp_common");
+    }
+
+    /**
+     * 配置 Boss 营寨 — 大量普通怪物 + 一只 Boss
+     */
+    private static void configureBossCamp(Camp camp, ServerLevel world,
+                                           Holder<net.minecraft.world.level.biome.Biome> biome, Random rand,
+                                           int distanceFromSpawn) {
+        List<String> mobPool = CampRandomizer.getMobPoolForBiome(biome);
+        // Boss 营寨有更多怪物
+        Map<String, Integer> config = generateMobConfig(mobPool, rand, 5, 12);
+
+        // 添加 Boss 级怪物
+        String boss = selectBossForBiome(biome, rand);
+        config.put(boss, 1);
+
+        camp.setMobConfig(config);
+        camp.setTriggerRange(16); // 更大触发范围
+        camp.setLootTable(Camp.CAMP_ID + ":chests/camp_epic");
+    }
+
+    /**
+     * 配置资源营地 — 少量弱怪 + 资源宝箱
+     */
+    private static void configureResourceCamp(Camp camp, ServerLevel world,
+                                               Holder<net.minecraft.world.level.biome.Biome> biome, Random rand) {
+        List<String> mobPool = CampRandomizer.getMobPoolForBiome(biome);
+        // 资源营地怪物较少
+        Map<String, Integer> config = generateMobConfig(mobPool, rand, 1, 3);
+
+        camp.setMobConfig(config);
+        camp.setTriggerRange(8); // 较小触发范围
+        // 资源营地使用矿物奖励战利品表
+        camp.setLootTable(Camp.CAMP_ID + ":chests/camp_resource");
+    }
+
+    /**
+     * 配置谜题营地 — 少量怪物 + 特殊宝藏
+     */
+    private static void configurePuzzleCamp(Camp camp, ServerLevel world,
+                                             Holder<net.minecraft.world.level.biome.Biome> biome, Random rand) {
+        List<String> mobPool = CampRandomizer.getMobPoolForBiome(biome);
+        // 谜题营地中等数量
+        Map<String, Integer> config = generateMobConfig(mobPool, rand, 2, 5);
+
+        camp.setMobConfig(config);
+        camp.setLootTable(Camp.CAMP_ID + ":chests/camp_rare");
+    }
+
+    /**
+     * 选择适合群系的 Boss 怪物
+     */
+    private static String selectBossForBiome(Holder<net.minecraft.world.level.biome.Biome> biome, Random rand) {
+        var biomeKey = biome.unwrapKey();
+        String biomeName = biomeKey.map(k -> k.location().getPath()).orElse("");
+
+        String[] bosses;
+        if (biomeName.contains("desert")) {
+            bosses = new String[]{"minecraft:husk", "minecraft:zombie"};
+        } else if (biomeName.contains("snowy") || biomeName.contains("ice")) {
+            bosses = new String[]{"minecraft:stray", "minecraft:skeleton"};
+        } else {
+            bosses = new String[]{"minecraft:zombie", "minecraft:skeleton"};
+        }
+        // Boss 带装备强化
+        return bosses[rand.nextInt(bosses.length)];
+    }
+
+    /**
+     * 通用怪物配置生成
+     */
+    private static Map<String, Integer> generateMobConfig(List<String> mobPool, Random rand,
+                                                           int minTotal, int maxTotal) {
+        if (mobPool.isEmpty()) {
+            mobPool = new ArrayList<>(List.of("minecraft:zombie", "minecraft:skeleton"));
+        }
+
+        int totalTarget = minTotal + rand.nextInt(maxTotal - minTotal + 1);
         int speciesCount = Math.min(1 + rand.nextInt(Math.min(3, mobPool.size())), mobPool.size());
         List<String> selected = new ArrayList<>(mobPool);
         Collections.shuffle(selected, rand);
         selected = selected.subList(0, speciesCount);
 
-        int totalTarget = 3 + rand.nextInt(6);
+        Map<String, Integer> config = new LinkedHashMap<>();
         int allocated = 0;
         for (int i = 0; i < selected.size(); i++) {
             int max = i == selected.size() - 1 ? totalTarget - allocated
                     : Math.min(3, totalTarget - allocated - (selected.size() - i - 1));
             if (max < 1) max = 1;
             int count = 1 + rand.nextInt(Math.min(3, max));
-            mobConfig.put(selected.get(i), count);
+            config.put(selected.get(i), count);
             allocated += count;
         }
-        camp.setMobConfig(mobConfig);
-
-        manager.addCamp(camp);
-        ShadeMod.LOGGER.debug("[shadecamp] ★ 据点 '{}' @ {} | {} 只怪物", name, pos.toShortString(),
-                mobConfig.values().stream().mapToInt(Integer::intValue).sum());
-        return camp;
+        return config;
     }
 
 }
