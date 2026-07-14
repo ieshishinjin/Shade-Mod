@@ -196,6 +196,15 @@ public class StoryEngine {
         return scripts.values();
     }
 
+    /**
+     * 注册一个脚本（用于动态创建的脚本，如 NPC AI 对话）
+     */
+    public void registerScript(StoryScript script) {
+        if (script != null && script.getId() != null) {
+            scripts.put(script.getId(), script);
+        }
+    }
+
     // ==================== 故事流程控制 ====================
 
     /**
@@ -300,8 +309,9 @@ public class StoryEngine {
                 // 标记脚本为已完成
                 StoryManager manager = StoryManager.getInstance(world);
                 manager.markScriptCompleted(player, state.currentScript);
-                // 自动解锁画廊结局
-                GalleryManager.getInstance(world).unlockByScript(player, state.currentScript);
+                // 自动解锁画廊结局（带 Flag 条件判断）
+                var progress = manager.getProgress(player);
+                GalleryManager.getInstance(world).unlockByScript(player, state.currentScript, progress.getFlags());
                 ShadeMod.LOGGER.info("[story] 玩家 {} 完成剧情: {}",
                         player.getName().getString(), state.currentScript);
 

@@ -14,6 +14,13 @@ public class Camp {
     /** 据点功能的独立命名空间 */
     public static final String CAMP_ID = "shadecamp";
 
+    public enum Type {
+        NORMAL,
+        BOSS,
+        RESOURCE,
+        PUZZLE
+    }
+
     public enum Status {
         /** 空闲 - 怪物存在但未激活 */
         IDLE,
@@ -24,6 +31,7 @@ public class Camp {
     }
 
     private String name;
+    private Type type = Type.NORMAL;     // 据点类型
     private int[] position;              // [x, y, z] 据点中心坐标
     private int triggerRange = 12;       // 触发半径
     private Map<String, Integer> mobConfig = new LinkedHashMap<>(); // 实体ID -> 数量
@@ -168,6 +176,9 @@ public class Camp {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public Type getType() { return type; }
+    public void setType(Type type) { this.type = type; }
 
     public int[] getPosition() { return position; }
     public void setPosition(int[] position) { this.position = position; }

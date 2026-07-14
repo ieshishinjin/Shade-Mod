@@ -62,7 +62,7 @@ public class StoryEventHandler {
             }
         });
 
-        // NPC/村民交互 → 触发器检测 + Quest 进度
+        // NPC/村民交互 → 触发器检测 + Quest 进度 + AI 对话
         UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (player instanceof ServerPlayer serverPlayer && hand == InteractionHand.MAIN_HAND) {
                 String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
@@ -75,6 +75,16 @@ public class StoryEventHandler {
                 if (entity instanceof net.minecraft.world.entity.npc.Villager) {
                     AdapterRegistry.notifyProgress(serverPlayer, "TRADE_VILLAGER",
                             entityId, 1);
+                }
+
+                // 潜行+右键 → AI 对话（村民或命名生物）
+                if (player.isShiftKeyDown()) {
+                    boolean isNamed = entity.hasCustomName();
+                    boolean isVillager = entity instanceof net.minecraft.world.entity.npc.Villager;
+                    if (isVillager || isNamed) {
+                        handleAiNpcChat(serverPlayer, entity, entityId);
+                        return InteractionResult.SUCCESS;
+                    }
                 }
             }
             return InteractionResult.PASS;
@@ -148,6 +158,75 @@ public class StoryEventHandler {
         AutoStoryGenerator.cleanup();
         io.github.shade.story.aigen.PlayerStoryProfile.cleanupAll();
         io.github.shade.story.aigen.StoryContextManager.cleanupAll();
+    }
+
+    // ==================== AI NPC 对话 ====================
+
+    /**
+     * 处理与 NPC 的 AI 对话
+     */
+    private static void handleAiNpcChat(ServerPlayer player, net.minecraft.world.entity.Entity entity, String entityId) {
+        var world = player.serverLevel();
+        var config = io.github.shade.story.aigen.AiConfig.getInstance(world);
+        if (!config.isEnabled()) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§cAI 未启用，请先使用 /story ai 配置"));
+            return;
+        }
+
+        String npcName = entity.hasCustomName()
+                ? entity.getCustomName().getString()
+                : entity.getType().getDescription().getString();
+
+        // 创建临时的 AI NPC 对话脚本
+        var engine = io.github.shade.story.StoryEngine.getInstance(world);
+        String scriptId = "ai_npc_" + player.getUUID().toString().substring(0, 6);
+
+        // 结束当前剧情
+        if (engine.isInStory(player)) {
+            engine.endStory(player);
+        }
+
+        // 创建一个临时脚本供 AI 注入
+        var script = new io.github.shade.story.model.StoryScript();
+        script.setId(scriptId);
+        script.setTitle("与" + npcName + "的对话");
+        script.setStartNode("ai_start");
+        script.setNodes(new java.util.LinkedHashMap<>());
+        engine.registerScript(script);
+
+        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§e✦ 与 " + npcName + " 对话中..."));
+
+        // 异步生成 NPC 对话
+        var future = io.github.shade.story.aigen.StoryAiGenerator.getInstance()
+                .generate(player, engine, config,
+                        "玩家正在与NPC「" + npcName + "」交谈。"
+                        + "请生成一段简短的对话场景（3-5句对白），NPC是" + npcName + "。"
+                        + "对话要符合Minecraft世界观，自然生动。首句应是NPC主动打招呼。");
+
+        io.github.shade.story.aigen.GenerationQueue.getInstance()
+                .submit(player, future, "NPC对话: " + npcName);
+
+        future.thenAccept(result -> {
+            if (result.isSuccess()) {
+                var injected = io.github.shade.story.aigen.StoryAiGenerator.getInstance()
+                        .injectNodes(player, engine, result);
+                if (injected != null) {
+                    var startNode = engine.startScript(player, scriptId);
+                    if (startNode != null) {
+                        var displayNode = engine.resolveAndGetDisplayNode(player);
+                        if (displayNode != null) {
+                            io.github.shade.story.network.StoryPayloads.sendNodeToClient(
+                                    player, engine, displayNode);
+                        }
+                    }
+                }
+            } else {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "§c对话生成失败: " + result.getError()));
+            }
+        });
     }
 
     // ==================== 游戏事件 → Quest 进度 ====================

@@ -68,10 +68,17 @@ public class GalleryManager {
                 "在晨曦营地中醒来，陌生的天花板和温暖的阳光。", "shade:textures/gui/cg/wake_up.png", "chapter1_wake_up"));
         addDefinition(GalleryEntry.cg("cg_meet_akaya", "初次相遇",
                 "与阿卡娅的第一次对话，命运的齿轮开始转动。", "shade:textures/gui/cg/meet_akaya.png", "chapter1_wake_up"));
-        addDefinition(GalleryEntry.ending("end_chapter1_normal", "第一章：踏上旅途",
-                "接受了阿卡娅的请求，踏入了陌生的世界。", "chapter1_wake_up"));
-        addDefinition(GalleryEntry.ending("end_chapter1_rest", "第一章：休整",
-                "选择先休息一天，养精蓄锐。", "chapter1_wake_up"));
+
+        // 结局条目带条件：根据玩家选择的 Flag 解锁不同结局
+        var endingNormal = GalleryEntry.ending("end_chapter1_normal", "第一章：踏上旅途",
+                "接受了阿卡娅的请求，踏入了陌生的世界。", "chapter1_wake_up");
+        endingNormal.setCondition("accepted_first_quest=true");
+        addDefinition(endingNormal);
+
+        var endingRest = GalleryEntry.ending("end_chapter1_rest", "第一章：休整",
+                "选择先休息一天，养精蓄锐。", "chapter1_wake_up");
+        endingRest.setCondition("declined_first_quest=true");
+        addDefinition(endingRest);
     }
 
     public void addDefinition(GalleryEntry entry) {
@@ -104,13 +111,46 @@ public class GalleryManager {
      * 根据脚本 ID 自动解锁关联条目
      */
     public void unlockByScript(ServerPlayer player, String scriptId) {
+        unlockByScript(player, scriptId, null);
+    }
+
+    /**
+     * 根据脚本 ID 和 Flag 条件解锁关联条目
+     * 如果 ending 有 conditions 要求，只有满足条件才解锁
+     */
+    public void unlockByScript(ServerPlayer player, String scriptId, Map<String, Object> playerFlags) {
         for (GalleryEntry entry : galleryDefs.values()) {
-            if (scriptId.equals(entry.getScriptId())) {
-                if (entry.getType().equals("ENDING")) {
-                    unlock(player, entry.getId());
+            if (!scriptId.equals(entry.getScriptId())) continue;
+
+            if (entry.getType().equals("ENDING")) {
+                // 检查条件：如果 entry 有 condition 字段且 flags 不为空，则验证
+                if (entry.getCondition() != null && !entry.getCondition().isEmpty() && playerFlags != null) {
+                    if (!evaluateCondition(entry.getCondition(), playerFlags)) {
+                        continue; // 条件不满足，不解锁
+                    }
                 }
+                unlock(player, entry.getId());
+            } else if (entry.getType().equals("CG")) {
+                // CG 无条件解锁
+                unlock(player, entry.getId());
             }
         }
+    }
+
+    /**
+     * 评估条件表达式（格式: "flag_name=value"）
+     */
+    private boolean evaluateCondition(String condition, Map<String, Object> flags) {
+        String[] parts = condition.split("=");
+        if (parts.length < 2) return true; // 无有效条件，默认通过
+
+        String key = parts[0].trim();
+        String expectedValue = parts[1].trim();
+
+        Object actualValue = flags.get(key);
+        if (actualValue == null) return false;
+
+        return actualValue.toString().equals(expectedValue);
     }
 
     // ==================== 查询 ====================
