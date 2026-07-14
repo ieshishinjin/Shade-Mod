@@ -7,6 +7,7 @@ import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.model.StoryScript;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.quest.RuntimeQuest;
+import io.github.shade.worldlevel.WorldLevel;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -64,12 +65,24 @@ public class PromptBuilder {
         sb.append(getPlayerSummary(player));
         sb.append("\n");
 
+        sb.append("【玩家游戏风格】\n");
+        sb.append(getPlayerProfileSummary(player));
+        sb.append("\n");
+
         sb.append("【剧情上下文】\n");
         sb.append(getStoryContext(player, engine));
         sb.append("\n");
 
+        sb.append("【剧情连续性】\n");
+        sb.append(getStoryContinuity(player));
+        sb.append("\n");
+
         sb.append("【可用 Objective 类型】\n");
         sb.append(getObjectiveTypes());
+        sb.append("\n");
+
+        sb.append("【世界等级与难度约束】\n");
+        sb.append(getWorldLevelConstraints(player));
         sb.append("\n");
 
         sb.append("【玩家输入】\n");
@@ -85,6 +98,7 @@ public class PromptBuilder {
         sb.append("\n");
 
         sb.append("请根据以上信息生成下一个剧情节点。\n");
+        sb.append("注意：如果生成 QUEST_START，objective 的数量和难度要与世界等级匹配。\n");
         sb.append("注意：如果剧情已经自然结束，请输出 END 类型节点。\n");
 
         return sb.toString();
@@ -190,6 +204,47 @@ public class PromptBuilder {
         }
 
         return sb.toString();
+    }
+
+    // ==================== 玩家风格与剧情连续性 ====================
+
+    /**
+     * 获取玩家游戏风格摘要
+     */
+    private static String getPlayerProfileSummary(ServerPlayer player) {
+        var profile = io.github.shade.story.aigen.PlayerStoryProfile.get(player.getUUID());
+        return profile.getSummary();
+    }
+
+    /**
+     * 获取剧情连续性上下文
+     */
+    private static String getStoryContinuity(ServerPlayer player) {
+        var context = io.github.shade.story.aigen.StoryContextManager.get(player.getUUID());
+        return context.getSummary();
+    }
+
+    /**
+     * 获取世界等级约束
+     */
+    private static String getWorldLevelConstraints(ServerPlayer player) {
+        try {
+            int wl = WorldLevel.getLevel(player.serverLevel());
+            return String.format("""
+                    当前世界等级: %d
+                    难度约束:
+                    - 如果生成 QUEST_START，Objective 数量应为 %d~%d 个
+                    - 击杀数量基础: %d 只
+                    - 推荐营地距离: 出生点 %d~%d 格范围内
+                    """,
+                    wl,
+                    Math.min(1, wl / 2 + 1), Math.min(5, wl + 1),
+                    2 + wl,
+                    100 + wl * 100, 200 + wl * 200
+            );
+        } catch (Exception e) {
+            return "当前世界等级: 0（默认）\n";
+        }
     }
 
     // ==================== 类型库 ====================
