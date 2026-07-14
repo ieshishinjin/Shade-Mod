@@ -157,6 +157,27 @@ public class StoryPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // === CG 展示包 (S2C) ===
+
+    public record CgDisplayPayload(String texture, String title, int fadeInTicks) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CgDisplayPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:cg_display"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, CgDisplayPayload> CODEC = StreamCodec.of(
+                (buf, p) -> { buf.writeUtf(p.texture, 256); buf.writeUtf(p.title, 128); buf.writeVarInt(p.fadeInTicks); },
+                buf -> new CgDisplayPayload(buf.readUtf(256), buf.readUtf(128), buf.readVarInt()));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === CG 关闭包 (C2S) ===
+
+    public record CgClosePayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<CgClosePayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:cg_close"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, CgClosePayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new CgClosePayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // === 注册与处理 ===
 
     public static void register() {
@@ -165,9 +186,20 @@ public class StoryPayloads {
         PayloadTypeRegistry.playS2C().register(QuestSyncPayload.TYPE, QuestSyncPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(QuestLogPayload.TYPE, QuestLogPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryActionPayload.TYPE, StoryActionPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(CgDisplayPayload.TYPE, CgDisplayPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(QuestLogRequestPayload.TYPE, QuestLogRequestPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CgClosePayload.TYPE, CgClosePayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
         ServerPlayNetworking.registerGlobalReceiver(QuestLogRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendQuestLogToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(CgClosePayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> {
+            var player = ctx.player();
+            var engine = StoryEngine.getInstance(player.serverLevel());
+            if (engine.isInStory(player)) {
+                var nextNode = engine.advance(player);
+                if (nextNode != null) sendNodeToClient(player, engine, nextNode);
+                else ServerPlayNetworking.send(player, StoryDialogPayload.close());
+            }
+        }));
         ShadeMod.LOGGER.debug("[story] 网络包已注册");
     }
 

@@ -11,6 +11,7 @@ import io.github.shade.story.model.*;
 import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.quest.RuntimeQuest;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -593,6 +594,15 @@ public class StoryEngine {
                     ShadeMod.LOGGER.debug("[story] 触发据点: {}", value);
                     break;
 
+                case EventData.TYPE_SHOW_CG:
+                    // 展示 CG 插画 — 发送 CG 数据包到客户端
+                    if (value != null && !value.isEmpty()) {
+                        String cgTitle = params != null ? String.valueOf(params.getOrDefault("title", "")) : "";
+                        int fadeIn = params != null && params.containsKey("fadeIn") ? ((Number) params.get("fadeIn")).intValue() : 20;
+                        ServerPlayNetworking.send(player, new io.github.shade.story.network.StoryPayloads.CgDisplayPayload(value, cgTitle, fadeIn));
+                        ShadeMod.LOGGER.debug("[story] 展示 CG: {} ({})", value, cgTitle);
+                    }
+                    break;
                 default:
                     ShadeMod.LOGGER.warn("[story] 未知事件类型: {}", type);
             }

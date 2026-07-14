@@ -1,6 +1,7 @@
 package io.github.shade.client;
 
 import io.github.shade.client.aigen.AiControlScreen;
+import io.github.shade.client.story.CgScreen;
 import io.github.shade.client.story.QuestLogScreen;
 import io.github.shade.client.story.StoryDialogScreen;
 import io.github.shade.client.story.StoryMenuScreen;
@@ -92,6 +93,14 @@ public class ShadeModClient implements ClientModInitializer {
                 (payload, context) -> {
                     context.client().execute(() -> {
                         questLogScreen.updateData(payload.activeQuests(), payload.completedQuestIds());
+                    });
+                });
+
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.CgDisplayPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        context.client().setScreen(new CgScreen(
+                                payload.texture(), payload.title(), payload.fadeInTicks()));
                     });
                 });
     }

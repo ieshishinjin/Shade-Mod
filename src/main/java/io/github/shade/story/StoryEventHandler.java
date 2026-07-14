@@ -9,6 +9,7 @@ import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
 import io.github.shade.story.event.PlayerEvents;
 import io.github.shade.story.trigger.TriggerManager;
+import io.github.shade.story.WorldEventManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -31,6 +32,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 public class StoryEventHandler {
 
     private static boolean registered = false;
+
+    /** NPC AI 对话冷却（毫秒） */
+    private static final long NPC_CHAT_COOLDOWN_MS = 10000; // 10秒
+    private static final java.util.Map<java.util.UUID, Long> npcChatCooldowns = new java.util.HashMap<>();
 
     public static void register() {
         if (registered) return;
@@ -148,6 +153,9 @@ public class StoryEventHandler {
 
             // 自动剧情生成检测（每 100 tick = 5秒）
             AutoStoryGenerator.getInstance().tick(level, server.getTickCount());
+
+            // 世界事件检测（每 200 tick = 10秒）
+            WorldEventManager.getInstance().tick(level, server.getTickCount());
         }
     }
 
@@ -161,6 +169,7 @@ public class StoryEventHandler {
         AiConfig.cleanup();
         GenerationQueue.cleanup();
         AutoStoryGenerator.cleanup();
+        WorldEventManager.cleanup();
         io.github.shade.story.aigen.PlayerStoryProfile.cleanupAll();
         io.github.shade.story.aigen.StoryContextManager.cleanupAll();
     }
@@ -171,6 +180,17 @@ public class StoryEventHandler {
      * 处理与 NPC 的 AI 对话
      */
     private static void handleAiNpcChat(ServerPlayer player, net.minecraft.world.entity.Entity entity, String entityId) {
+        // 冷却检查
+        long now = System.currentTimeMillis();
+        Long lastChat = npcChatCooldowns.get(player.getUUID());
+        if (lastChat != null && (now - lastChat) < NPC_CHAT_COOLDOWN_MS) {
+            long remaining = (NPC_CHAT_COOLDOWN_MS - (now - lastChat)) / 1000;
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§e✦ 请稍候 " + remaining + " 秒再对话"));
+            return;
+        }
+        npcChatCooldowns.put(player.getUUID(), now);
+
         var world = player.serverLevel();
         var config = io.github.shade.story.aigen.AiConfig.getInstance(world);
         if (!config.isEnabled()) {

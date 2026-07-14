@@ -38,6 +38,8 @@ public class EventData {
     public static final String TYPE_SUMMON_MOB = "SUMMON_MOB";
     /** 触发 Camp 据点战斗 */
     public static final String TYPE_TRIGGER_CAMP = "TRIGGER_CAMP";
+    /** 展示 CG 插画 */
+    public static final String TYPE_SHOW_CG = "SHOW_CG";
 
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }

@@ -9,5 +9,19 @@
   "shade.story.reload.success": "§aStory scripts reloaded",
   "shade.story.list.none": "§7No story scripts available",
   "shade.story.list.header": "§6=== Available Stories (§e%d§6) ===",
-  "shade.quest.reward.choose": "\n§6✦ Choose a reward:"
+  "shade.quest.reward.choose": "\n§6✦ Choose a reward:",
+  "key.shade.story_menu": "Story Menu",
+  "key.shade.ai_control": "AI Control Panel",
+  "key.shade.quest_log": "Quest Log",
+  "category.shade": "Shade Mod",
+  "shade.guide.welcome": "\n§6✦ §lWelcome to Shade Mod!",
+  "shade.guide.line1": "  §7A mod featuring Galgame stories, AI generation & camp battles",
+  "shade.guide.line2": "  §7Quick start guide:\n",
+  "shade.guide.key.menu": "  §eR §7- Open story menu",
+  "shade.guide.key.ai": "  §eU §7- AI control panel",
+  "shade.guide.key.quest": "  §eL §7- Open quest log",
+  "shade.guide.key.npc": "  §eShift+Right-click §7- Talk to NPC",
+  "shade.guide.cmd.camp": "  §e/camp list §7- View nearby camps",
+  "shade.guide.cmd.story": "  §e/story list §7- View all scripts",
+  "shade.guide.cmd.ai": "  §e/story ai recommend §7- Configure free AI"
 }
