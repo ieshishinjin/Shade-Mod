@@ -3,8 +3,10 @@ package io.github.shade.story;
 import io.github.shade.ShadeMod;
 import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.story.aigen.AiConfig;
+import io.github.shade.story.aigen.AutoStoryGenerator;
 import io.github.shade.story.gallery.GalleryManager;
 import io.github.shade.story.quest.QuestManager;
+import io.github.shade.story.event.PlayerEvents;
 import io.github.shade.story.trigger.TriggerManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -59,14 +61,34 @@ public class StoryEventHandler {
             }
         });
 
-        // NPC 交互 → 触发器检测
+        // NPC/村民交互 → 触发器检测 + Quest 进度
         UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (player instanceof ServerPlayer serverPlayer && hand == InteractionHand.MAIN_HAND) {
                 String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+
+                // 触发器检测
                 TriggerManager.getInstance(serverPlayer.serverLevel())
                         .checkNpcInteract(serverPlayer, entityId);
+
+                // 村民交互 → TRADE_VILLAGER Quest 进度
+                if (entity instanceof net.minecraft.world.entity.npc.Villager) {
+                    AdapterRegistry.notifyProgress(serverPlayer, "TRADE_VILLAGER",
+                            entityId, 1);
+                }
             }
             return InteractionResult.PASS;
+        });
+
+        // 合成事件 → CRAFT_ITEM Quest 进度
+        PlayerEvents.CRAFTED.register((player, recipe, craftedItems) -> {
+            if (craftedItems != null) {
+                for (var stack : craftedItems) {
+                    if (!stack.isEmpty()) {
+                        String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                        AdapterRegistry.notifyProgress(player, "CRAFT_ITEM", itemId, stack.getCount());
+                    }
+                }
+            }
         });
     }
 
@@ -87,6 +109,16 @@ public class StoryEventHandler {
             if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
             QuestManager.getInstance(level).tick();
             TriggerManager.getInstance(level).tick();
+
+            // 每 10 tick（0.5 秒）检查玩家物品变化 → COLLECT_ITEM 进度
+            if (server.getTickCount() % 10 == 0) {
+                InventoryTracker inventoryTracker = InventoryTracker.getInstance();
+                for (ServerPlayer player : level.players()) {
+                    if (!player.isSpectator()) {
+                        inventoryTracker.scan(player);
+                    }
+                }
+            }
 
             // 每 20 tick（1 秒）检查玩家位置 → REACH_LOCATION 进度
             if (server.getTickCount() % 20 == 0) {

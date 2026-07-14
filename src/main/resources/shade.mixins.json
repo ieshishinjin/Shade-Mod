@@ -3,7 +3,8 @@
 	"package": "io.github.shade.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-      "ShadeMixin"
+      "ShadeMixin",
+      "CraftingMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
