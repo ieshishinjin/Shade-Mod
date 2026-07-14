@@ -72,6 +72,17 @@ public class RuntimeQuest {
     }
 
     /**
+     * 获取所有 Objective 的总进度（用于检测进度变化）
+     */
+    public int getTotalProgress() {
+        int total = 0;
+        for (RuntimeObjective obj : objectives) {
+            total += obj.getProgress();
+        }
+        return total;
+    }
+
+    /**
      * 从适配器同步进度
      */
     public void syncFromAdapters(ServerPlayer player) {

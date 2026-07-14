@@ -74,11 +74,50 @@ public class StoryPayloads {
         public static StoryActionPayload openMenu() { return new StoryActionPayload(3, -1); }
     }
 
+    // === Quest 同步包 (S2C) ===
+
+    public record QuestSyncPayload(
+            boolean hasQuest,
+            String questName,
+            String[] objectiveTexts,
+            int[] progress,
+            int[] maxProgress
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<QuestSyncPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:quest_sync"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, QuestSyncPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeBoolean(p.hasQuest);
+                    buf.writeUtf(p.questName != null ? p.questName : "", 256);
+                    if (p.hasQuest) {
+                        buf.writeVarInt(p.objectiveTexts != null ? p.objectiveTexts.length : 0);
+                        if (p.objectiveTexts != null) for (String t : p.objectiveTexts) buf.writeUtf(t, 512);
+                        if (p.progress != null) for (int v : p.progress) buf.writeVarInt(v);
+                        if (p.maxProgress != null) for (int v : p.maxProgress) buf.writeVarInt(v);
+                    }
+                },
+                buf -> {
+                    boolean hasQuest = buf.readBoolean();
+                    String qn = buf.readUtf(256);
+                    if (!hasQuest) return new QuestSyncPayload(false, qn, null, null, null);
+                    int len = buf.readVarInt();
+                    String[] texts = new String[len];
+                    int[] prog = new int[len];
+                    int[] maxP = new int[len];
+                    for (int i = 0; i < len; i++) texts[i] = buf.readUtf(512);
+                    for (int i = 0; i < len; i++) prog[i] = buf.readVarInt();
+                    for (int i = 0; i < len; i++) maxP[i] = buf.readVarInt();
+                    return new QuestSyncPayload(true, qn, texts, prog, maxP);
+                });
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // === 注册与处理 ===
 
     public static void register() {
         PayloadTypeRegistry.playS2C().register(StoryDialogPayload.TYPE, StoryDialogPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StoryMenuPayload.TYPE, StoryMenuPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(QuestSyncPayload.TYPE, QuestSyncPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryActionPayload.TYPE, StoryActionPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
         ShadeMod.LOGGER.info("[story] 网络包已注册");

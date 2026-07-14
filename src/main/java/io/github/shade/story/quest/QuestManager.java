@@ -1,10 +1,13 @@
 package io.github.shade.story.quest;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import io.github.shade.ShadeMod;
 import io.github.shade.story.StoryEngine;
 import io.github.shade.story.adapter.AdapterRegistry;
 import io.github.shade.story.model.QuestData;
 import io.github.shade.story.model.QuestRewardData;
+import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -13,7 +16,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.LevelResource;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,18 +38,25 @@ public class QuestManager {
 
     private static final Map<ServerLevel, QuestManager> INSTANCES = new ConcurrentHashMap<>();
 
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
     /** 每个玩家的活跃 Quest 列表 */
     private final Map<UUID, List<RuntimeQuest>> activeQuests = new ConcurrentHashMap<>();
     /** 每个玩家的已完成 Quest 历史 */
     private final Map<UUID, Set<String>> completedQuestIds = new ConcurrentHashMap<>();
 
     private final ServerLevel world;
+    private final Path saveDir;
     private int tickCounter = 0;
 
     // ==================== 单例 ====================
 
     private QuestManager(ServerLevel world) {
         this.world = world;
+        this.saveDir = world.getServer()
+                .getWorldPath(LevelResource.ROOT)
+                .resolve("data/shade/quest");
+        loadAll();
     }
 
     public static QuestManager getInstance(ServerLevel world) {
@@ -54,10 +68,16 @@ public class QuestManager {
     }
 
     public static void cleanup(ServerLevel world) {
-        INSTANCES.remove(world);
+        QuestManager mgr = INSTANCES.remove(world);
+        if (mgr != null) {
+            mgr.saveAll();
+        }
     }
 
     public static void cleanupAll() {
+        for (QuestManager mgr : INSTANCES.values()) {
+            mgr.saveAll();
+        }
         INSTANCES.clear();
     }
 
@@ -109,6 +129,9 @@ public class QuestManager {
 
         ShadeMod.LOGGER.info("[quest] 玩家 {} 开始 Quest: {} ({})",
                 player.getName().getString(), quest.getQuestName(), quest.getQuestId());
+
+        // 同步到客户端 HUD
+        sendQuestSyncToClient(player);
         return quest;
     }
 
@@ -132,11 +155,18 @@ public class QuestManager {
                 RuntimeQuest quest = it.next();
                 if (quest.getState() != RuntimeQuest.QuestState.ACTIVE) {
                     it.remove();
+                    sendQuestSyncToClient(player);
                     continue;
                 }
 
                 // 从适配器同步进度
+                int oldProgress = quest.getTotalProgress();
                 quest.syncFromAdapters(player);
+
+                // 进度有变化 → 同步到客户端
+                if (quest.getTotalProgress() != oldProgress) {
+                    sendQuestSyncToClient(player);
+                }
 
                 // 检测完成
                 if (quest.isCompleted()) {
@@ -154,14 +184,21 @@ public class QuestManager {
         List<RuntimeQuest> quests = activeQuests.get(player.getUUID());
         if (quests == null || quests.isEmpty()) return;
 
+        boolean anyUpdated = false;
         for (RuntimeQuest quest : quests) {
             if (quest.getState() != RuntimeQuest.QuestState.ACTIVE) continue;
 
             boolean updated = quest.updateProgress(objectiveType, targetId, delta);
 
-            // 进度有更新 && 完成 → 完成 Quest
-            if (updated && quest.isCompleted()) {
-                completeQuest(player, quest);
+            if (updated) {
+                anyUpdated = true;
+                // 同步进度到客户端 HUD
+                sendQuestSyncToClient(player);
+
+                // 进度有更新 && 完成 → 完成 Quest
+                if (quest.isCompleted()) {
+                    completeQuest(player, quest);
+                }
             }
         }
     }
@@ -243,7 +280,7 @@ public class QuestManager {
     }
 
     /**
-     * 通知剧情引擎 Quest 完成
+     * 通知剧情引擎 Quest 完成 — 自动跳转到 onQuestComplete 节点
      */
     private void notifyStoryEngine(ServerPlayer player, RuntimeQuest quest) {
         String nextNode = quest.getOnQuestComplete();
@@ -253,9 +290,17 @@ public class QuestManager {
         if (!engine.isInStory(player)) return;
 
         // 如果玩家在剧情中，跳转到 Quest 完成节点
-        ShadeMod.LOGGER.debug("[quest] 剧情跳转: {} → {}", quest.getQuestName(), nextNode);
-        // 通过 StoryEngine 的节点跳转机制
-        // 玩家当前所在节点应包含 onQuestComplete 指向的节点 ID
+        ShadeMod.LOGGER.info("[quest] 剧情跳转: {} → {} (节点: {})",
+                quest.getQuestName(), engine.getActiveScriptId(player), nextNode);
+
+        // 设置剧情引擎当前节点为完成节点
+        engine.setCurrentNode(player, nextNode);
+
+        // 获取并发送下一个展示节点
+        StoryNode displayNode = engine.resolveAndGetDisplayNode(player);
+        if (displayNode != null) {
+            StoryPayloads.sendNodeToClient(player, engine, displayNode);
+        }
     }
 
     /**
@@ -294,9 +339,119 @@ public class QuestManager {
         return completed != null && completed.contains(questId);
     }
 
+    // ==================== 数据持久化 ====================
+
     /**
-     * 获取 Quest 追踪 HUD 数据
+     * 保存所有玩家进度到磁盘
      */
+    public void saveAll() {
+        for (UUID uuid : completedQuestIds.keySet()) {
+            saveToDisk(uuid);
+        }
+    }
+
+    /**
+     * 加载所有玩家进度
+     */
+    private void loadAll() {
+        try {
+            if (Files.exists(saveDir)) {
+                try (var files = Files.list(saveDir)) {
+                    files.filter(f -> f.toString().endsWith(".json")).forEach(f -> {
+                        try {
+                            String fileName = f.getFileName().toString();
+                            UUID uuid = UUID.fromString(fileName.replace(".json", ""));
+                            QuestProgressData data = loadFromDisk(uuid);
+                            if (data != null) {
+                                completedQuestIds.put(uuid, ConcurrentHashMap.newKeySet());
+                                if (data.completedQuestIds != null) {
+                                    completedQuestIds.get(uuid).addAll(data.completedQuestIds);
+                                }
+                            }
+                        } catch (IllegalArgumentException ignored) {}
+                    });
+                }
+            }
+        } catch (IOException e) {
+            ShadeMod.LOGGER.error("[quest] 加载 Quest 进度失败", e);
+        }
+    }
+
+    /**
+     * 保存指定玩家 Quest 进度到磁盘
+     */
+    public void save(ServerPlayer player) {
+        saveToDisk(player.getUUID());
+    }
+
+    private void saveToDisk(UUID uuid) {
+        try {
+            Files.createDirectories(saveDir);
+            Set<String> completed = completedQuestIds.get(uuid);
+            if (completed == null || completed.isEmpty()) return;
+
+            QuestProgressData data = new QuestProgressData(uuid, new ArrayList<>(completed));
+            Path file = saveDir.resolve(uuid.toString() + ".json");
+            try (Writer writer = Files.newBufferedWriter(file)) {
+                GSON.toJson(data, writer);
+            }
+        } catch (IOException e) {
+            ShadeMod.LOGGER.error("[quest] 保存 Quest 进度失败: {}", uuid, e);
+        }
+    }
+
+    private QuestProgressData loadFromDisk(UUID uuid) {
+        Path file = saveDir.resolve(uuid.toString() + ".json");
+        if (!Files.exists(file)) return null;
+        try (Reader reader = Files.newBufferedReader(file)) {
+            return GSON.fromJson(reader, QuestProgressData.class);
+        } catch (IOException e) {
+            ShadeMod.LOGGER.error("[quest] 加载 Quest 进度失败: {}", uuid, e);
+            return null;
+        }
+    }
+
+    /**
+     * Quest 进度持久化数据结构（JSON）
+     */
+    private static class QuestProgressData {
+        UUID playerUuid;
+        List<String> completedQuestIds;
+
+        QuestProgressData() {}
+
+        QuestProgressData(UUID playerUuid, List<String> completedQuestIds) {
+            this.playerUuid = playerUuid;
+            this.completedQuestIds = completedQuestIds;
+        }
+    }
+
+    /**
+     * 发送 Quest 追踪数据到客户端
+     */
+    private void sendQuestSyncToClient(ServerPlayer player) {
+        RuntimeQuest quest = getPrimaryQuest(player);
+        if (quest == null || quest.getState() != RuntimeQuest.QuestState.ACTIVE) {
+            ServerPlayNetworking.send(player, new StoryPayloads.QuestSyncPayload(false, "", null, null, null));
+            return;
+        }
+
+        var objectives = quest.getObjectives();
+        int count = objectives.size();
+        String[] texts = new String[count];
+        int[] progress = new int[count];
+        int[] maxProgress = new int[count];
+
+        for (int i = 0; i < count; i++) {
+            RuntimeObjective obj = objectives.get(i);
+            texts[i] = obj.getDisplayText();
+            progress[i] = obj.getProgress();
+            maxProgress[i] = obj.getTargetCount();
+        }
+
+        ServerPlayNetworking.send(player,
+                new StoryPayloads.QuestSyncPayload(true, quest.getQuestName(), texts, progress, maxProgress));
+    }
     public String[] getTrackingData(ServerPlayer player) {
         RuntimeQuest quest = getPrimaryQuest(player);
         if (quest == null) return new String[0];

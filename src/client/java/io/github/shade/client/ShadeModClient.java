@@ -62,5 +62,20 @@ public class ShadeModClient implements ClientModInitializer {
                         context.client().setScreen(new StoryMenuScreen(payload));
                     });
                 });
+
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.QuestSyncPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        if (payload.hasQuest()) {
+                            StoryQuestOverlay.getInstance().updateQuest(
+                                    payload.questName(),
+                                    payload.objectiveTexts(),
+                                    payload.progress(),
+                                    payload.maxProgress());
+                        } else {
+                            StoryQuestOverlay.getInstance().clearQuest();
+                        }
+                    });
+                });
     }
 }

@@ -87,6 +87,16 @@ public class StoryEventHandler {
             if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
             QuestManager.getInstance(level).tick();
             TriggerManager.getInstance(level).tick();
+
+            // 每 20 tick（1 秒）检查玩家位置 → REACH_LOCATION 进度
+            if (server.getTickCount() % 20 == 0) {
+                ZoneTracker zoneTracker = ZoneTracker.getInstance();
+                for (ServerPlayer player : level.players()) {
+                    if (!player.isSpectator()) {
+                        zoneTracker.checkPlayerPosition(player);
+                    }
+                }
+            }
         }
     }
 
