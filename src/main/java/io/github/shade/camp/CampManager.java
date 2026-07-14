@@ -757,6 +757,14 @@ public class CampManager {
         CampRewardHandler.ChestTier tier = CampRewardHandler.ChestTier.forMobCount(camp.getTotalMobCount(), WorldLevel.getLevel(world));
         CampRewardHandler.spawnRewardChest(world, camp, tier);
 
+        // AI 联动：营地清空 -> 记录玩家行为 + 触发剧情生成
+        for (ServerPlayer player : getPlayersInRange(camp)) {
+            io.github.shade.story.aigen.PlayerStoryProfile.get(player.getUUID())
+                    .recordAction("clear_camp");
+            io.github.shade.story.aigen.AutoStoryGenerator.getInstance()
+                    .onQuestCompleted(player);
+        }
+
         // 通知 Quest 系统：该营地已被占领
         for (ServerPlayer player : getPlayersInRange(camp)) {
             AdapterRegistry.notifyProgress(player, "OCCUPY_CAMP", camp.getName(), 1);

@@ -237,5 +237,9 @@ public class StoryEventHandler {
         if (!(entity instanceof Monster)) {
             AdapterRegistry.notifyProgress(player, "KILL_BOSS", entityId, 1);
         }
+
+        // 记录玩家行为（AI 联动）
+        io.github.shade.story.aigen.PlayerStoryProfile.get(player.getUUID())
+                .recordAction("kill");
     }
 }
