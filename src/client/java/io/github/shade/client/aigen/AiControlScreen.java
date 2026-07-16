@@ -126,7 +126,19 @@ public class AiControlScreen extends Screen {
 
         // ═══ 剧情进度 ═══
         drawLabel(g, "剧情进度", x, py + 46, C_MUTED);
-        drawText(g, "○ 第一章：苏醒  (进行中)", x + 2, py + 57, C_TEXT);
+        var prog = io.github.shade.client.ShadeModClient.cachedProgress;
+        if (prog != null) {
+            String status = prog.hasActiveStory()
+                    ? "§b▶ " + prog.activeScriptTitle() + " (进行中)"
+                    : (prog.completedScripts() > 0 ? "§a✔ " + prog.completedScripts() + "/" + prog.totalScripts() + " 已完成" : "§7○ 未开始");
+            drawText(g, status, x + 2, py + 57, C_TEXT);
+            if (prog.totalScripts() > 0) {
+                String pct = String.format("%.0f%%", (float) prog.completedScripts() / prog.totalScripts() * 100);
+                drawText(g, "§7收集进度: §f" + pct, x + 2, py + 67, C_MUTED);
+            }
+        } else {
+            drawText(g, "§7○ 加载中...", x + 2, py + 57, C_MUTED);
+        }
         sep(g, x, py + 72);
 
         // ═══ AI 引擎 ═══

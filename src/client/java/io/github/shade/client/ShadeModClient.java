@@ -2,6 +2,7 @@ package io.github.shade.client;
 
 import io.github.shade.client.aigen.AiControlScreen;
 import io.github.shade.client.story.CgScreen;
+import io.github.shade.client.story.GalleryBrowserScreen;
 import io.github.shade.client.story.QuestLogScreen;
 import io.github.shade.client.story.StoryDialogScreen;
 import io.github.shade.client.story.StoryMenuScreen;
@@ -19,6 +20,9 @@ public class ShadeModClient implements ClientModInitializer {
 
     private static KeyMapping storyMenuKey, aiControlKey, questLogKey;
     private static final QuestLogScreen questLogScreen = new QuestLogScreen();
+
+    /** 缓存的故事进度（供 AiControlScreen 读取） */
+    public static StoryPayloads.StoryProgressPayload cachedProgress = null;
 
     @Override
     public void onInitializeClient() {
@@ -48,6 +52,7 @@ public class ShadeModClient implements ClientModInitializer {
             }
             if (aiControlKey.consumeClick()) {
                 client.setScreen(new AiControlScreen());
+                ClientPlayNetworking.send(new StoryPayloads.StoryProgressRequestPayload());
             }
             if (questLogKey.consumeClick()) {
                 client.setScreen(questLogScreen);
@@ -101,6 +106,22 @@ public class ShadeModClient implements ClientModInitializer {
                     context.client().execute(() -> {
                         context.client().setScreen(new CgScreen(
                                 payload.texture(), payload.title(), payload.fadeInTicks()));
+                    });
+                });
+
+        // 画廊数据 → 打开画廊浏览器
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.GalleryPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        context.client().setScreen(new GalleryBrowserScreen(payload.entries(), payload.unlockedIds()));
+                    });
+                });
+
+        // 故事进度 → 缓存供 AiControlScreen 读取
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.StoryProgressPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        cachedProgress = payload;
                     });
                 });
     }

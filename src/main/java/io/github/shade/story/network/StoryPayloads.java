@@ -178,6 +178,68 @@ public class StoryPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // === 画廊数据包 (S2C) ===
+
+    public record GalleryPayload(
+            List<GalleryEntryData> entries,
+            List<String> unlockedIds
+    ) implements CustomPacketPayload {
+        public record GalleryEntryData(String id, String title, String description, String type, String texturePath) {}
+        public static final CustomPacketPayload.Type<GalleryPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:gallery"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, GalleryPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeCollection(p.entries, (b, e) -> {
+                        b.writeUtf(e.id(), 64); b.writeUtf(e.title(), 128);
+                        b.writeUtf(e.description(), 256); b.writeUtf(e.type(), 16);
+                        b.writeUtf(e.texturePath() != null ? e.texturePath() : "", 256);
+                    });
+                    buf.writeCollection(p.unlockedIds, (b, id) -> b.writeUtf(id, 64));
+                },
+                buf -> new GalleryPayload(
+                        buf.readList(b -> new GalleryEntryData(b.readUtf(64), b.readUtf(128), b.readUtf(256), b.readUtf(16), b.readUtf(256))),
+                        buf.readList(b -> b.readUtf(64))));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求画廊数据 (C2S) ===
+
+    public record GalleryRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<GalleryRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:gallery_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, GalleryRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new GalleryRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 故事进度包 (S2C) — 供 AiControlScreen 使用 ===
+
+    public record StoryProgressPayload(
+            boolean hasActiveStory,
+            String activeScriptTitle,
+            String activeScriptId,
+            boolean completed,
+            int totalScripts,
+            int completedScripts
+    ) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<StoryProgressPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:story_progress"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, StoryProgressPayload> CODEC = StreamCodec.of(
+                (buf, p) -> { buf.writeBoolean(p.hasActiveStory); buf.writeUtf(p.activeScriptTitle, 128); buf.writeUtf(p.activeScriptId, 64); buf.writeBoolean(p.completed); buf.writeVarInt(p.totalScripts); buf.writeVarInt(p.completedScripts); },
+                buf -> new StoryProgressPayload(buf.readBoolean(), buf.readUtf(128), buf.readUtf(64), buf.readBoolean(), buf.readVarInt(), buf.readVarInt()));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求故事进度 (C2S) ===
+
+    public record StoryProgressRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<StoryProgressRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:story_progress_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, StoryProgressRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new StoryProgressRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // === 注册与处理 ===
 
     public static void register() {
@@ -187,10 +249,16 @@ public class StoryPayloads {
         PayloadTypeRegistry.playS2C().register(QuestLogPayload.TYPE, QuestLogPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryActionPayload.TYPE, StoryActionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CgDisplayPayload.TYPE, CgDisplayPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(GalleryPayload.TYPE, GalleryPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(StoryProgressPayload.TYPE, StoryProgressPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(QuestLogRequestPayload.TYPE, QuestLogRequestPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CgClosePayload.TYPE, CgClosePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(GalleryRequestPayload.TYPE, GalleryRequestPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(StoryProgressRequestPayload.TYPE, StoryProgressRequestPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
         ServerPlayNetworking.registerGlobalReceiver(QuestLogRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendQuestLogToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(GalleryRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendGalleryToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(StoryProgressRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendStoryProgressToClient(ctx.player())));
         ServerPlayNetworking.registerGlobalReceiver(CgClosePayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> {
             var player = ctx.player();
             var engine = StoryEngine.getInstance(player.serverLevel());
@@ -228,6 +296,38 @@ public class StoryPayloads {
         }
 
         ServerPlayNetworking.send(player, new QuestLogPayload(entries, new ArrayList<>(completed)));
+    }
+
+    /**
+     * 发送画廊数据到客户端
+     */
+    public static void sendGalleryToClient(ServerPlayer player) {
+        var gm = io.github.shade.story.gallery.GalleryManager.getInstance(player.serverLevel());
+        var data = gm.getDisplayData(player);
+        List<GalleryPayload.GalleryEntryData> entries = new ArrayList<>();
+        for (var entry : gm.getAllEntries()) {
+            entries.add(new GalleryPayload.GalleryEntryData(
+                    entry.getId(), entry.getTitle(), entry.getDescription(),
+                    entry.getType(), entry.getTexturePath()));
+        }
+        ServerPlayNetworking.send(player, new GalleryPayload(entries, new ArrayList<>(data.unlockedIds())));
+    }
+
+    /**
+     * 发送故事进度到客户端（供 AiControlScreen 使用）
+     */
+    public static void sendStoryProgressToClient(ServerPlayer player) {
+        var engine = StoryEngine.getInstance(player.serverLevel());
+        var mgr = StoryManager.getInstance(player.serverLevel());
+        var progress = mgr.getProgress(player);
+        int total = engine.getAllScripts().size();
+        int completed = progress.getCompletedScripts().size();
+        String activeId = engine.getActiveScriptId(player);
+        String activeTitle = "";
+        boolean hasActive = activeId != null;
+        if (hasActive) { var s = engine.getScript(activeId); if (s != null) activeTitle = s.getTitle(); }
+        boolean thisCompleted = activeId != null && progress.getCompletedScripts().contains(activeId);
+        ServerPlayNetworking.send(player, new StoryProgressPayload(hasActive, activeTitle, activeId != null ? activeId : "", thisCompleted, total, completed));
     }
 
     private static void handlePlayerAction(ServerPlayer player, StoryActionPayload payload) {

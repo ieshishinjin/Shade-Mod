@@ -1,6 +1,7 @@
 package io.github.shade.client.story;
 
 import io.github.shade.story.network.StoryPayloads;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -52,7 +53,10 @@ public class StoryMenuScreen extends Screen {
 
         int bottomY = height - BOTTOM_MARGIN;
 
-        galleryButton = Button.builder(Component.literal("§6画廊"), btn -> runCmd("story gallery"))
+        galleryButton = Button.builder(Component.literal("§6画廊"), btn -> {
+                    onClose();
+                    ClientPlayNetworking.send(new StoryPayloads.GalleryRequestPayload());
+                })
                 .bounds(lx, bottomY, 95, 20).build();
         addRenderableWidget(galleryButton);
 
