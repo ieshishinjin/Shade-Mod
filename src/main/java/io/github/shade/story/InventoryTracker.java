@@ -106,13 +106,8 @@ public class InventoryTracker {
             snapshot.merge(id, offhand.getCount(), Integer::sum);
         }
 
-        // 2x2 个人合成格
-        for (ItemStack stack : player.getInventory().crafting) {
-            if (!stack.isEmpty()) {
-                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-                snapshot.merge(id, stack.getCount(), Integer::sum);
-            }
-        }
+        // 注意：个人 2x2 合成格属于 ContainerPlayer 容器，不属于 Inventory
+        // 如需追踪合成格物品，需要从 openContainer 中获取
 
         return snapshot;
     }

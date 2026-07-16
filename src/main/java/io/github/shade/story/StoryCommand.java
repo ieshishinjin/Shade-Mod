@@ -12,6 +12,7 @@ import io.github.shade.story.model.StoryNode;
 import io.github.shade.story.model.StoryScript;
 import io.github.shade.story.network.StoryPayloads;
 import io.github.shade.story.quest.QuestManager;
+import io.github.shade.story.quest.RuntimeObjective;
 import io.github.shade.story.quest.RuntimeQuest;
 import io.github.shade.story.trigger.StoryTrigger;
 import io.github.shade.story.trigger.TriggerManager;

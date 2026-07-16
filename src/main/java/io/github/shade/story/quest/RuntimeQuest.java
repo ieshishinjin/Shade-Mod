@@ -27,7 +27,7 @@ public class RuntimeQuest {
     /** 超时时间（游戏 tick），0=永不超时 */
     private final long timeoutTicks;
     /** Quest 开始的游戏 tick */
-    private final long startTime;
+    private long startTime;
 
     private QuestState state;
 

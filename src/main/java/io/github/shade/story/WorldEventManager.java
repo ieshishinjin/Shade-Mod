@@ -12,13 +12,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.npc.WanderingTrader;
-import net.minecraft.world.entity.npc.WanderingTraderSpawner;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.particles.ParticleTypes;
 
 import java.util.*;
@@ -106,18 +99,12 @@ public class WorldEventManager {
                     }
                 }
                 case "SIEGE" -> {
-                    // 怪物攻城：创建时已生成怪物，此处检查是否怪物全灭
-                    if (elapsed > 0 && elapsed % 400 == 0) {
-                        // 每 20 秒检查一次，如果怪物都被杀了就补充
-                        var targetPlayer = level.getPlayerByUUID(entry.getKey());
-                        if (targetPlayer != null && event.spawnedEntities > 0) {
-                            int alive = 0;
-                            for (var entity : level.getAllEntities()) {
-                                if (entity.getPersistentData().getBoolean("siege_mob")) {
-                                    alive++;
-                                }
-                            }
-                            if (alive == 0) {
+                    // 怪物攻城：通过 event.siegeMobIds 追踪怪物存活情况
+                    if (elapsed > 0 && elapsed % 400 == 0 && event.spawnedEntities > 0) {
+                        event.siegeMobIds.removeIf(uuid -> level.getEntity(uuid) == null || !level.getEntity(uuid).isAlive());
+                        if (event.siegeMobIds.isEmpty()) {
+                            var targetPlayer = (net.minecraft.server.level.ServerPlayer) level.getPlayerByUUID(entry.getKey());
+                            if (targetPlayer != null) {
                                 spawnSiegeMobs(level, event, targetPlayer);
                                 targetPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                                         "§c⚔ 怪物的援军到了！"));
@@ -150,8 +137,8 @@ public class WorldEventManager {
                         // 清理所有事件标记的实体
                     }
                     case "SIEGE" -> {
-                        // 怪物攻城结束 - 移除事件标记的怪物
-                        removeSiegeMobs();
+                        // 怪物攻城结束 - 事件数据自行清理
+                        event.siegeMobIds.clear();
                     }
                 }
                 return true;
@@ -201,7 +188,7 @@ public class WorldEventManager {
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("\n§6✦ §e夜空中划过一道流星..."));
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                 "§7天空中有火光划过，流星坠落在了远方！"));
-        player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.AMBIENT, 1.0f, 1.0f);
+        player.playNotifySound(net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.AMBIENT, 1.0f, 1.0f);
 
         // 立即生成 3 颗流星
         for (int i = 0; i < 3; i++) {
@@ -214,7 +201,7 @@ public class WorldEventManager {
      */
     private void spawnMeteor(ServerLevel level, WorldEvent event) {
         BlockPos pos = event.position;
-        Random random = level.random;
+        var random = level.random;
 
         // 在事件位置附近随机偏移
         int ox = random.nextInt(40) - 20;
@@ -225,24 +212,17 @@ public class WorldEventManager {
         int topY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, impactPos.getX(), impactPos.getZ());
         if (topY <= level.getMinBuildHeight()) return;
 
-        // 在高空生成火球，让它自然坠落
-        BlockPos fireballPos = new BlockPos(impactPos.getX(), topY + 40 + random.nextInt(20), impactPos.getZ());
-        var fireball = EntityType.FIREBALL.create(level);
-        if (fireball != null) {
-            fireball.setPos(fireballPos.getX(), fireballPos.getY(), fireballPos.getZ());
-            // 设置向下速度
-            fireball.setDeltaMovement(0, -1.5 - random.nextDouble(), 0);
-            fireball.setNoGravity(false);
-            level.addFreshEntity(fireball);
-
-            // 粒子效果
-            level.sendParticles(ParticleTypes.FLAME,
-                    fireballPos.getX(), fireballPos.getY(), fireballPos.getZ(),
-                    10, 0.5, 0.5, 0.5, 0.1);
-            level.sendParticles(ParticleTypes.SMOKE,
-                    fireballPos.getX(), fireballPos.getY(), fireballPos.getZ(),
-                    5, 0.3, 0.3, 0.3, 0.05);
-        }
+        // 在高空产生火焰粒子效果
+        BlockPos particlePos = new BlockPos(impactPos.getX(), topY + 30 + random.nextInt(20), impactPos.getZ());
+        level.sendParticles(ParticleTypes.FLAME,
+                particlePos.getX(), particlePos.getY(), particlePos.getZ(),
+                20, 2.0, 0.5, 2.0, 0.1);
+        level.sendParticles(ParticleTypes.SMOKE,
+                particlePos.getX(), particlePos.getY(), particlePos.getZ(),
+                10, 1.5, 0.3, 1.5, 0.05);
+        level.sendParticles(ParticleTypes.EXPLOSION,
+                impactPos.getX(), topY + 1, impactPos.getZ(),
+                1, 1.0, 0.5, 1.0, 0);
     }
 
     // ==================== 怪物攻城事件 ====================
@@ -254,7 +234,7 @@ public class WorldEventManager {
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal("\n§c⚔ §e你感觉到了一股邪恶的气息正在逼近！"));
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                 "§7四周响起了低沉的嘶吼声...准备好战斗吧！"));
-        player.playNotifySound(SoundEvents.EVENT_MOB_SPAWNER_SPAWN, SoundSource.HOSTILE, 1.0f, 1.0f);
+        player.playNotifySound(net.minecraft.sounds.SoundEvents.ZOMBIE_AMBIENT, SoundSource.HOSTILE, 1.0f, 1.0f);
 
         int count = spawnSiegeMobs(level, event, player);
         event.spawnedEntities = count;
@@ -263,11 +243,11 @@ public class WorldEventManager {
     }
 
     /**
-     * 在事件位置附近生成攻城怪物
+     * 在事件位置附近生成攻城怪物，UUID 记录在 event.siegeMobIds 中
      */
     private int spawnSiegeMobs(ServerLevel level, WorldEvent event, ServerPlayer player) {
         BlockPos center = player.blockPosition();
-        Random random = level.random;
+        var random = level.random;
 
         // 可生成的怪物类型
         String[] mobTypes = {"minecraft:zombie", "minecraft:skeleton", "minecraft:spider",
@@ -304,9 +284,8 @@ public class WorldEventManager {
                 mob.setPersistenceRequired();
                 mob.setAggressive(true);
                 mob.setTarget(player);
-                // 标记为攻城怪物（用于后续清理）
-                mob.getPersistentData().putBoolean("siege_mob", true);
                 level.addFreshEntity(mob);
+                event.siegeMobIds.add(mob.getUUID());
                 spawned++;
             }
         }
@@ -314,12 +293,9 @@ public class WorldEventManager {
     }
 
     /**
-     * 移除所有攻城怪物
+     * 清除所有攻城怪物（由 siegeMobIds 追踪，事件过期时自动清空列表）
      */
-    private void removeSiegeMobs() {
-        // 由 tickActiveEvents 检查清理，此处留空
-        // 实际清理通过 PersistenData 标记 + 事件结束广播处理
-    }
+    // removeSiegeMobs 已由 siegeMobIds 追踪替代
 
     // ==================== 贸易车队事件 ====================
 
@@ -423,6 +399,8 @@ public class WorldEventManager {
         public final long startTime;
         /** 生成实体计数（用于攻城/商队） */
         public int spawnedEntities = 0;
+        /** 攻城怪物的 UUID（用于追踪存活情况，替代 PersistentData） */
+        public final java.util.Set<java.util.UUID> siegeMobIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
         WorldEvent(String type, BlockPos position, String name, long durationTicks) {
             this.type = type;
