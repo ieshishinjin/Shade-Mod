@@ -153,8 +153,8 @@ public class TriggerManager {
                 }
             }
 
-            // 物品拾取检测（通过比较背包快照）
-            checkInventoryForPickup(player);
+            // 物品拾取检测（由 InventoryTracker.scan() 统一处理，避免重复扫描）
+        // checkInventoryForPickup(player); — 已移至 InventoryTracker
         }
     }
 
