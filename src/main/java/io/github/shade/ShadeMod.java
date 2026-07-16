@@ -38,7 +38,10 @@ public class ShadeMod implements ModInitializer {
         StoryPayloads.register();      // S2C/C2S 自定义数据包
 
         // — 适配器 —
-        AdapterRegistry.register(new CampAdapter());  // 游戏系统→剧情框架 桥接
+        AdapterRegistry.register(new CampAdapter());       // 据点系统（OCCUPY_CAMP, ATTACK_CAMP 等）
+        AdapterRegistry.register(new io.github.shade.story.adapter.InventoryAdapter());  // 物品收集（COLLECT_ITEM, CRAFT_ITEM）
+        AdapterRegistry.register(new io.github.shade.story.adapter.CombatAdapter());     // 战斗统计（KILL_MOB, KILL_BOSS）
+        AdapterRegistry.register(new io.github.shade.story.adapter.VillagerAdapter());   // 村民交易（TRADE_VILLAGER）
 
         // — 命令 —
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
