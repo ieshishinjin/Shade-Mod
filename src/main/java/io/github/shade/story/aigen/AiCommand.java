@@ -146,8 +146,8 @@ public class AiCommand {
 
     private static int executeProvider(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         String name = StringArgumentType.getString(ctx, "name").toLowerCase();
-        if (!name.equals("deepseek") && !name.equals("ollama")) {
-            ctx.getSource().sendFailure(Component.literal("§c支持: deepseek, ollama"));
+        if (!name.equals("deepseek") && !name.equals("ollama") && !name.equals("custom") && !name.equals("claude")) {
+            ctx.getSource().sendFailure(Component.literal("§c支持: deepseek, ollama, claude, custom"));
             return 0;
         }
         ServerPlayer player = ctx.getSource().getPlayerOrException();
@@ -179,6 +179,8 @@ public class AiCommand {
         switch (config.getProvider()) {
             case "deepseek" -> config.setDeepseekModel(model);
             case "ollama" -> config.setOllamaModel(model);
+            case "claude" -> config.setClaudeModel(model);
+            case "custom" -> config.setCustomModel(model);
         }
         ctx.getSource().sendSuccess(() ->
                 Component.literal("§a✔ 已设置模型: " + model), true);
@@ -192,6 +194,8 @@ public class AiCommand {
         switch (config.getProvider()) {
             case "deepseek" -> config.setDeepseekEndpoint(url);
             case "ollama" -> config.setOllamaEndpoint(url);
+            case "claude" -> config.setClaudeEndpoint(url);
+            case "custom" -> config.setCustomEndpoint(url);
         }
         ctx.getSource().sendSuccess(() ->
                 Component.literal("§a✔ 已设置端点: " + url), true);
@@ -318,6 +322,8 @@ public class AiCommand {
         return switch (config.getProvider()) {
             case "deepseek" -> config.getDeepseekModel();
             case "ollama" -> config.getOllamaModel();
+            case "claude" -> config.getClaudeModel();
+            case "custom" -> config.getCustomModel();
             default -> "—";
         };
     }
@@ -373,15 +379,12 @@ public class AiCommand {
             config.setDeepseekEndpoint(provider.apiEndpoint());
             config.setDeepseekModel(provider.modelName());
         } else {
+            // 其他服务商（智谱、星火、Groq 等）→ 存入自定义字段
             config.setProvider("custom");
-            // 对于非 DeepSeek（有独立命令的），通过通用方式设置
-            config.setProvider("custom");
+            config.setCustomEndpoint(provider.apiEndpoint());
+            config.setCustomModel(provider.modelName());
+            // API Key 仍用通用字段
         }
-
-        // 对所有服务商通用：设置 endpoint 和模型（通过 AiConfig 内部字段存自定义）
-        // 使用反射或新增字段来存储自定义 provider 配置
-        config.setDeepseekEndpoint(provider.apiEndpoint());
-        config.setDeepseekModel(provider.modelName());
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 "§a✔ 已选择: " + provider.name()), true);
@@ -449,7 +452,7 @@ public class AiCommand {
     private static CompletableFuture<Suggestions> suggestProviders(
             CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
-                java.util.List.of("deepseek", "ollama"), builder);
+                java.util.List.of("deepseek", "ollama", "claude", "custom"), builder);
     }
 
     private static CompletableFuture<Suggestions> suggestRecommends(

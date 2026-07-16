@@ -47,23 +47,25 @@ public class AiControlScreen extends Screen {
         int y5 = py + 226;    // 底部操作栏
 
         // Row 1
-        addRenderableWidget(new ThemeButton(x, y1, 78, 16, "DeepSeek", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x, y1, 66, 16, "DeepSeek", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai provider deepseek")));
-        addRenderableWidget(new ThemeButton(x + 81, y1, 72, 16, "Ollama", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x + 69, y1, 60, 16, "Ollama", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai provider ollama")));
-        addRenderableWidget(new ThemeButton(x + 157, y1, 46, 16, "启用", C_GREEN, C_GREEN, false, true,
+        addRenderableWidget(new ThemeButton(x + 132, y1, 60, 16, "Claude", 0xFFD4A574, C_TEXT, false, false,
+                b -> runCmd("story ai provider claude")));
+        addRenderableWidget(new ThemeButton(x + 195, y1, 40, 16, "启用", C_GREEN, C_GREEN, false, true,
                 b -> runCmd("story ai enable")));
-        addRenderableWidget(new ThemeButton(x + 205, y1, 46, 16, "禁用", C_RED, C_RED, false, false,
+        addRenderableWidget(new ThemeButton(x + 238, y1, 40, 16, "禁用", C_RED, C_RED, false, false,
                 b -> runCmd("story ai disable")));
 
         // Row 2
-        addRenderableWidget(new ThemeButton(x, y2, 84, 16, "智谱AI(免费)", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x, y2, 70, 16, "智谱AI(免费)", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai recommend zhipu")));
-        addRenderableWidget(new ThemeButton(x + 87, y2, 92, 16, "讯飞星火(免费)", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x + 73, y2, 80, 16, "讯飞星火(免费)", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai recommend xunfei")));
-        addRenderableWidget(new ThemeButton(x + 182, y2, 46, 16, "Groq", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x + 156, y2, 40, 16, "Groq", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai recommend groq")));
-        addRenderableWidget(new ThemeButton(x + 231, y2, 40, 16, "更多", C_ACCENT, C_TEXT, false, false,
+        addRenderableWidget(new ThemeButton(x + 199, y2, 36, 16, "更多", C_ACCENT, C_TEXT, false, false,
                 b -> runCmd("story ai recommend")));
 
         // Row 3: 温度 / 短 / 长

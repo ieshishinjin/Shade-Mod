@@ -47,13 +47,16 @@ public class AiSettingsScreen extends Screen {
         int y1 = py + 50;
         boolean isDeepseek = currentProvider.equals("deepseek");
         boolean isOllama = currentProvider.equals("ollama");
+        boolean isClaude = currentProvider.equals("claude");
         boolean isCustom = currentProvider.equals("custom");
 
-        addRenderableWidget(new ThemeButton(x, y1, 90, 18, "DeepSeek", C_ACCENT, C_TEXT, false, isDeepseek,
+        addRenderableWidget(new ThemeButton(x, y1, 78, 18, "DeepSeek", C_ACCENT, C_TEXT, false, isDeepseek,
                 b -> { currentProvider = "deepseek"; rebuild(); }));
-        addRenderableWidget(new ThemeButton(x + 94, y1, 80, 18, "Ollama", C_ACCENT, C_TEXT, false, isOllama,
+        addRenderableWidget(new ThemeButton(x + 82, y1, 68, 18, "Ollama", C_ACCENT, C_TEXT, false, isOllama,
                 b -> { currentProvider = "ollama"; rebuild(); }));
-        addRenderableWidget(new ThemeButton(x + 178, y1, 68, 18, "自定义", 0xFFFFAA44, C_TEXT, false, isCustom,
+        addRenderableWidget(new ThemeButton(x + 154, y1, 64, 18, "Claude", 0xFFD4A574, C_TEXT, false, isClaude,
+                b -> { currentProvider = "claude"; rebuild(); }));
+        addRenderableWidget(new ThemeButton(x + 222, y1, 58, 18, "自定义", 0xFFFFAA44, C_TEXT, false, isCustom,
                 b -> { currentProvider = "custom"; rebuild(); }));
 
         // — 2. API 端点（仅自定义时显示） —
@@ -114,13 +117,15 @@ public class AiSettingsScreen extends Screen {
             String ep = endpointInput != null ? endpointInput.getValue().trim() : "";
             String mdl = modelInput != null ? modelInput.getValue().trim() : "";
             if (ep.isEmpty() || mdl.isEmpty() || key.isEmpty()) return;
-            // 自定义：设提供者 → 端点 → 模型 → 密钥
             runCmd("story ai provider custom");
             runCmd("story ai endpoint " + ep);
             runCmd("story ai model " + mdl);
             runCmd("story ai key " + key);
+        } else if (currentProvider.equals("claude")) {
+            if (key.isEmpty()) return;
+            runCmd("story ai provider claude");
+            runCmd("story ai key " + key);
         } else if (currentProvider.equals("ollama")) {
-            // Ollama：设提供者，密钥可选
             runCmd("story ai provider ollama");
             if (!key.isEmpty()) runCmd("story ai key " + key);
         } else {
@@ -174,7 +179,9 @@ public class AiSettingsScreen extends Screen {
             g.fill(x - 4, py + 68, x - 2, py + 70, C_ACCENT);
             g.drawString(font, "API 密钥", x + 2, py + 68, C_MUTED, false);
 
-            String status = currentProvider.equals("deepseek") ? "当前: DeepSeek" : "当前: Ollama (本地)";
+            String status = currentProvider.equals("deepseek") ? "当前: DeepSeek"
+                    : currentProvider.equals("claude") ? "当前: Claude (Anthropic)"
+                    : "当前: Ollama (本地)";
             g.drawString(font, status, x, py + 114, 0xFF5A5A7A, false);
         }
 

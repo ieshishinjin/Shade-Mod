@@ -21,7 +21,7 @@ public class AiConfig {
     private static AiConfig INSTANCE;
     private static Path configPath;
 
-    /** AI 提供者类型：deepseek / ollama / none */
+    /** AI 提供者类型：deepseek / ollama / custom / none */
     private String provider = "none";
 
     /** DeepSeek API 密钥 */
@@ -38,6 +38,24 @@ public class AiConfig {
 
     /** Ollama 模型名 */
     private String ollamaModel = "llama3";
+
+    /** 自定义/通用 OpenAI 兼容 API 端点 */
+    private String customEndpoint = "https://api.openai.com/v1/chat/completions";
+
+    /** 自定义/通用 API 模型名 */
+    private String customModel = "gpt-4o-mini";
+
+    /** 自定义/通用 API 密钥 */
+    private String customApiKey = "";
+
+    /** Claude (Anthropic) API 端点 */
+    private String claudeEndpoint = "https://api.anthropic.com/v1/messages";
+
+    /** Claude 模型名 */
+    private String claudeModel = "claude-sonnet-4-20250514";
+
+    /** Claude API 密钥 */
+    private String claudeApiKey = "";
 
     /** 温度参数 (0.0~2.0) */
     private double temperature = 0.8;
@@ -124,6 +142,24 @@ public class AiConfig {
     public String getOllamaModel() { return ollamaModel; }
     public void setOllamaModel(String model) { this.ollamaModel = model; save(); }
 
+    public String getCustomEndpoint() { return customEndpoint; }
+    public void setCustomEndpoint(String endpoint) { this.customEndpoint = endpoint; save(); }
+
+    public String getCustomModel() { return customModel; }
+    public void setCustomModel(String model) { this.customModel = model; save(); }
+
+    public String getCustomApiKey() { return customApiKey; }
+    public void setCustomApiKey(String key) { this.customApiKey = key; save(); }
+
+    public String getClaudeEndpoint() { return claudeEndpoint; }
+    public void setClaudeEndpoint(String endpoint) { this.claudeEndpoint = endpoint; save(); }
+
+    public String getClaudeModel() { return claudeModel; }
+    public void setClaudeModel(String model) { this.claudeModel = model; save(); }
+
+    public String getClaudeApiKey() { return claudeApiKey; }
+    public void setClaudeApiKey(String key) { this.claudeApiKey = key; save(); }
+
     public double getTemperature() { return temperature; }
     public void setTemperature(double temp) { this.temperature = temp; save(); }
 
@@ -142,11 +178,23 @@ public class AiConfig {
         return apiKey.substring(0, 4) + "****";
     }
 
+    /** 获取当前提供者对应的 API Key（用于测试连接等通用逻辑） */
+    public String getCurrentApiKey() {
+        return switch (provider) {
+            case "deepseek" -> apiKey;
+            case "claude" -> claudeApiKey;
+            case "custom" -> customApiKey;
+            default -> "";
+        };
+    }
+
     public String getStatusString() {
         if (!enabled) return "§c已禁用";
         return switch (provider) {
             case "deepseek" -> "§aDeepSeek §7(" + deepseekModel + ") " + getMaskedApiKey();
             case "ollama" -> "§aOllama §7(" + ollamaModel + " @ " + ollamaEndpoint + ")";
+            case "claude" -> "§aClaude §7(" + claudeModel + ") " + (claudeApiKey.isEmpty() ? "§c未设置 Key" : claudeApiKey.substring(0, Math.min(4, claudeApiKey.length())) + "****");
+            case "custom" -> "§a自定义 §7(" + customModel + " @ " + customEndpoint + ") " + (customApiKey.isEmpty() ? "§c未设置 Key" : customApiKey.substring(0, Math.min(4, customApiKey.length())) + "****");
             default -> "§7未配置";
         };
     }
