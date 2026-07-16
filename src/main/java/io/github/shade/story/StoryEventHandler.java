@@ -77,17 +77,7 @@ public class StoryEventHandler {
             if (player instanceof ServerPlayer serverPlayer && hand == InteractionHand.MAIN_HAND) {
                 String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
 
-                // 触发器检测
-                TriggerManager.getInstance(serverPlayer.serverLevel())
-                        .checkNpcInteract(serverPlayer, entityId);
-
-                // 村民交互 → TRADE_VILLAGER Quest 进度
-                if (entity instanceof net.minecraft.world.entity.npc.Villager) {
-                    AdapterRegistry.notifyProgress(serverPlayer, "TRADE_VILLAGER",
-                            entityId, 1);
-                }
-
-                // 潜行+右键 → AI 对话（村民或命名生物）
+                // 潜行+右键 → AI 对话（优先级最高，不触发触发器）
                 if (player.isShiftKeyDown()) {
                     boolean isNamed = entity.hasCustomName();
                     boolean isVillager = entity instanceof net.minecraft.world.entity.npc.Villager;
@@ -95,6 +85,16 @@ public class StoryEventHandler {
                         handleAiNpcChat(serverPlayer, entity, entityId);
                         return InteractionResult.SUCCESS;
                     }
+                }
+
+                // 触发器检测（非 AI 对话时触发）
+                TriggerManager.getInstance(serverPlayer.serverLevel())
+                        .checkNpcInteract(serverPlayer, entityId);
+
+                // 村民交互 → TRADE_VILLAGER Quest 进度
+                if (entity instanceof net.minecraft.world.entity.npc.Villager) {
+                    AdapterRegistry.notifyProgress(serverPlayer, "TRADE_VILLAGER",
+                            entityId, 1);
                 }
             }
             return InteractionResult.PASS;
