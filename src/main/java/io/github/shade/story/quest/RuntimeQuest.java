@@ -24,6 +24,11 @@ public class RuntimeQuest {
     private final String onQuestComplete;
     private final String onQuestFail;
 
+    /** 超时时间（游戏 tick），0=永不超时 */
+    private final long timeoutTicks;
+    /** Quest 开始的游戏 tick */
+    private final long startTime;
+
     private QuestState state;
 
     public enum QuestState {
@@ -39,6 +44,8 @@ public class RuntimeQuest {
         this.rewards = data.getRewards();
         this.onQuestComplete = data.getOnQuestComplete();
         this.onQuestFail = data.getOnQuestFail();
+        this.timeoutTicks = data.getTimeoutTicks();
+        this.startTime = 0; // 由 setStartTime() 设置
         this.state = QuestState.ACTIVE;
 
         this.objectives = new ArrayList<>();
@@ -47,6 +54,12 @@ public class RuntimeQuest {
                 this.objectives.add(new RuntimeObjective(objData));
             }
         }
+    }
+
+    /** 超时构造（含游戏 tick） */
+    public RuntimeQuest(QuestData data, long gameTime) {
+        this(data);
+        this.startTime = gameTime;
     }
 
     // ==================== 进度管理 ====================
@@ -137,4 +150,6 @@ public class RuntimeQuest {
     public String getOnQuestComplete() { return onQuestComplete; }
     public String getOnQuestFail() { return onQuestFail; }
     public QuestState getState() { return state; }
+    public long getTimeoutTicks() { return timeoutTicks; }
+    public long getStartTime() { return startTime; }
 }

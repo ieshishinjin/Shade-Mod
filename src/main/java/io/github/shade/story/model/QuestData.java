@@ -35,6 +35,10 @@ public class QuestData {
     /** Quest 失败后跳转的节点 ID */
     private String onQuestFail;
 
+    /** 超时时间（游戏 tick），0=永不超时 */
+    @SerializedName("timeout_ticks")
+    private long timeoutTicks = 0;
+
     public QuestData() {}
 
     public String getQuestId() { return questId; }
@@ -57,4 +61,7 @@ public class QuestData {
 
     public String getOnQuestFail() { return onQuestFail; }
     public void setOnQuestFail(String onQuestFail) { this.onQuestFail = onQuestFail; }
+
+    public long getTimeoutTicks() { return timeoutTicks; }
+    public void setTimeoutTicks(long timeoutTicks) { this.timeoutTicks = timeoutTicks; }
 }

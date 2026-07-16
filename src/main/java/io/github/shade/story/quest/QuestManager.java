@@ -121,7 +121,7 @@ public class QuestManager {
             }
         }
 
-        RuntimeQuest quest = new RuntimeQuest(data);
+        RuntimeQuest quest = new RuntimeQuest(data, world.getGameTime());
         playerQuests.add(quest);
 
         // 从适配器同步初始进度
@@ -157,6 +157,18 @@ public class QuestManager {
                     it.remove();
                     sendQuestSyncToClient(player);
                     continue;
+                }
+
+                // 超时检测（timeoutTicks > 0 才启用）
+                long timeout = quest.getTimeoutTicks();
+                if (timeout > 0) {
+                    long elapsed = world.getGameTime() - quest.getStartTime();
+                    if (elapsed >= timeout) {
+                        ShadeMod.LOGGER.debug("[quest] Quest 超时: {} ({} tick)", quest.getQuestId(), elapsed);
+                        failQuest(player, quest.getQuestId());
+                        it.remove();
+                        continue;
+                    }
                 }
 
                 // 从适配器同步进度
@@ -375,6 +387,52 @@ public class QuestManager {
      */
     public List<RuntimeQuest> getActiveQuests(ServerPlayer player) {
         return activeQuests.getOrDefault(player.getUUID(), Collections.emptyList());
+    }
+
+    /**
+     * 放弃（失败）一个 Quest — 调用 fail()，通知剧情引擎
+     *
+     * @param player  目标玩家
+     * @param questId 要失败的 Quest ID
+     * @return 是否成功放弃
+     */
+    public boolean failQuest(ServerPlayer player, String questId) {
+        List<RuntimeQuest> quests = activeQuests.get(player.getUUID());
+        if (quests == null || quests.isEmpty()) return false;
+
+        for (RuntimeQuest quest : quests) {
+            if (quest.getQuestId().equals(questId) && quest.getState() == RuntimeQuest.QuestState.ACTIVE) {
+                quest.fail();
+                ShadeMod.LOGGER.info("[quest] 玩家 {} 放弃 Quest: {}", player.getName().getString(), quest.getQuestName());
+
+                // 通知剧情引擎跳转到 onQuestFail 节点
+                notifyStoryEngineFail(player, quest);
+
+                // 发送清除到客户端
+                sendQuestClearToClient(player, quest);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 通知剧情引擎 Quest 失败 — 跳转到 onQuestFail 节点
+     */
+    private void notifyStoryEngineFail(ServerPlayer player, RuntimeQuest quest) {
+        String failNode = quest.getOnQuestFail();
+        if (failNode == null || failNode.isEmpty()) return;
+
+        StoryEngine engine = StoryEngine.getInstance(world);
+        if (!engine.isInStory(player)) return;
+
+        ShadeMod.LOGGER.info("[quest] 剧情跳转(失败): {} → 节点: {}", quest.getQuestName(), failNode);
+        engine.setCurrentNode(player, failNode);
+
+        StoryNode displayNode = engine.resolveAndGetDisplayNode(player);
+        if (displayNode != null) {
+            StoryPayloads.sendNodeToClient(player, engine, displayNode);
+        }
     }
 
     /**

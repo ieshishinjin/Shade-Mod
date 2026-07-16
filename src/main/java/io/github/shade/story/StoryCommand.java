@@ -117,6 +117,14 @@ public class StoryCommand {
                         .then(literal("reset")
                                 .executes(StoryCommand::executeReset)
                         )
+                        .then(literal("quest")
+                                .then(literal("list")
+                                        .executes(StoryCommand::executeQuestList))
+                                .then(literal("abort")
+                                        .then(argument("questId", StringArgumentType.word())
+                                                .suggests(StoryCommand::suggestActiveQuests)
+                                                .executes(StoryCommand::executeQuestAbort)))
+                        )
                         .then(literal("reload")
                                 .requires(src -> src.hasPermission(2))
                                 .executes(StoryCommand::executeReload)
@@ -485,6 +493,54 @@ public class StoryCommand {
         player.sendSystemMessage(Component.literal("§7━━━━━━━━━━━━━━━━━"));
     }
 
+    // ==================== Quest 命令 ====================
+
+    /**
+     * 列出当前活跃的 Quest
+     */
+    private static int executeQuestList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        QuestManager qm = QuestManager.getInstance(player.serverLevel());
+        List<RuntimeQuest> quests = qm.getActiveQuests(player);
+
+        if (quests.isEmpty()) {
+            ctx.getSource().sendSuccess(() ->
+                    Component.literal("§7当前没有活跃的 Quest"), false);
+            return 0;
+        }
+
+        ctx.getSource().sendSuccess(() ->
+                Component.literal("§6=== 活跃 Quest (§e" + quests.size() + "§6) ==="), false);
+        for (RuntimeQuest q : quests) {
+            if (q.getState() != RuntimeQuest.QuestState.ACTIVE) continue;
+            ctx.getSource().sendSuccess(() ->
+                    Component.literal("  §6✦ §e" + q.getQuestName()
+                            + " §7(" + q.getQuestId() + ")"), false);
+            int done = (int) q.getObjectives().stream().filter(RuntimeObjective::isCompleted).count();
+            ctx.getSource().sendSuccess(() ->
+                    Component.literal("    §7进度: §e" + done + "§7/§e" + q.getObjectives().size()), false);
+        }
+        return quests.size();
+    }
+
+    /**
+     * 放弃一个活跃的 Quest
+     */
+    private static int executeQuestAbort(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        String questId = StringArgumentType.getString(ctx, "questId");
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        QuestManager qm = QuestManager.getInstance(player.serverLevel());
+
+        if (qm.failQuest(player, questId)) {
+            ctx.getSource().sendSuccess(() ->
+                    Component.literal("§c✔ 已放弃 Quest: " + questId), true);
+            return 1;
+        } else {
+            ctx.getSource().sendFailure(Component.literal("§c未找到活跃的 Quest: " + questId));
+            return 0;
+        }
+    }
+
     // ==================== 补全 ====================
 
     private static CompletableFuture<Suggestions> suggestChoices(
@@ -520,6 +576,20 @@ public class StoryCommand {
             StoryEngine engine = StoryEngine.getInstance(player.serverLevel());
             return SharedSuggestionProvider.suggest(
                     engine.getAllScripts().stream().map(StoryScript::getId), builder);
+        } catch (CommandSyntaxException e) {
+            return Suggestions.empty();
+        }
+    }
+
+    private static CompletableFuture<Suggestions> suggestActiveQuests(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            QuestManager qm = QuestManager.getInstance(player.serverLevel());
+            return SharedSuggestionProvider.suggest(
+                    qm.getActiveQuests(player).stream()
+                            .filter(q -> q.getState() == RuntimeQuest.QuestState.ACTIVE)
+                            .map(RuntimeQuest::getQuestId), builder);
         } catch (CommandSyntaxException e) {
             return Suggestions.empty();
         }
