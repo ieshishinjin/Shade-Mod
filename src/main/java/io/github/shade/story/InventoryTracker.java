@@ -86,7 +86,7 @@ public class InventoryTracker {
             }
         }
 
-        // 快捷栏
+        // 盔甲栏
         for (ItemStack stack : player.getInventory().armor) {
             if (!stack.isEmpty()) {
                 String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
@@ -99,6 +99,14 @@ public class InventoryTracker {
         if (!offhand.isEmpty()) {
             String id = BuiltInRegistries.ITEM.getKey(offhand.getItem()).toString();
             snapshot.merge(id, offhand.getCount(), Integer::sum);
+        }
+
+        // 2x2 个人合成格
+        for (ItemStack stack : player.getInventory().crafting) {
+            if (!stack.isEmpty()) {
+                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+                snapshot.merge(id, stack.getCount(), Integer::sum);
+            }
         }
 
         return snapshot;
