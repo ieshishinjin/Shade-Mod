@@ -83,7 +83,7 @@ public class StoryEngine {
         try {
             var classLoader = getClass().getClassLoader();
             // 已知脚本列表（如新增脚本，在此添加）
-            String[] knownScripts = {"chapter1_wake_up"};
+            String[] knownScripts = {"chapter1_wake_up", "chapter2_forest_whispers"};
 
             // 尝试自动发现更多脚本
             var enumUrls = classLoader.getResources("assets/shade/story/");

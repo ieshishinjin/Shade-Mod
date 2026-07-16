@@ -51,6 +51,8 @@ public class StoryAiGenerator {
         currentProvider = switch (providerType) {
             case "deepseek" -> new DeepSeekProvider();
             case "ollama" -> new OllamaProvider();
+            case "claude" -> new ClaudeProvider();
+            case "custom" -> new OpenAiCompatibleProvider();
             default -> null;
         };
 

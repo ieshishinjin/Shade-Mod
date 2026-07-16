@@ -612,45 +612,68 @@ public class CampManager {
     }
 
     /**
-     * 激活据点 - 生成怪物
+     * 激活据点 - 生成怪物并进入战斗状态
+     * <p>
+     * 已拆分为：
+     * 1. getOrRefreshSpawnPoints — 获取/刷新安全生成点
+     * 2. spawnCampMobs — 生成配置的怪物
+     * 3. spawnWorldLevelBonusMobs — 世界等级额外怪物
+     * 4. finalizeActivation — 设置状态、Boss Bar、保存
      */
     private void activateCamp(Camp camp) {
-        // 防无限刷新（至少间隔 10 分钟=12000 tick）
-        // 但首次生成（lastSpawnedTick <= 0）不受限制
+        // 防无限刷新（至少间隔 10 分钟=12000 tick，首次生成不受限制）
         long lastSpawn2 = camp.getLastSpawnedTick();
         if (lastSpawn2 > 0 && world.getGameTime() - lastSpawn2 < 12000) return;
         camp.setLastSpawnedTick(world.getGameTime());
 
+        // 1. 获取安全生成点
+        List<BlockPos> spawnPoints = getOrRefreshSpawnPoints(camp);
+        if (spawnPoints.isEmpty()) {
+            ShadeMod.LOGGER.warn("[shadecamp] 据点 {} 没有安全生成点，无法激活！", camp.getName());
+            return;
+        }
+
+        int worldLevel = WorldLevel.getLevel(world);
+        Random random = new Random(world.getSeed() + camp.getBlockPos().asLong() + gameTime());
+
+        // 2. 生成配置怪物
+        spawnCampMobs(camp, spawnPoints, random, worldLevel);
+
+        // 3. 世界等级额外怪物
+        if (worldLevel > 0) {
+            spawnWorldLevelBonusMobs(camp, spawnPoints, random, worldLevel);
+        }
+
+        // 4. 完成激活
+        finalizeActivation(camp, worldLevel);
+    }
+
+    /**
+     * 获取缓存的安全生成点，缓存为空时重新计算
+     */
+    private List<BlockPos> getOrRefreshSpawnPoints(Camp camp) {
         BlockPos campPos = camp.getBlockPos();
         List<BlockPos> spawnPoints = camp.getSafeSpawnBlockPositions();
         ShadeMod.LOGGER.debug("[shadecamp] 缓存安全点: {} 个", spawnPoints.size());
 
-        // 如果缓存为空，尝试重新计算
         if (spawnPoints.isEmpty()) {
             ShadeMod.LOGGER.debug("[shadecamp] 缓存为空，重新计算安全点...");
             spawnPoints = CampSpawnValidator.findSafeSpawnPoints(world, campPos, 8);
             camp.setSafeSpawnPointsFromBlocks(spawnPoints);
             ShadeMod.LOGGER.debug("[shadecamp] 重新计算后安全点: {} 个", spawnPoints.size());
         }
+        return spawnPoints;
+    }
 
-        // 如果依然没有安全位置，拒绝激活
-        if (spawnPoints.isEmpty()) {
-            ShadeMod.LOGGER.warn("[shadecamp] 据点 {} 没有安全生成点，无法激活！", camp.getName());
-            return;
-        }
-
-        Random random = new Random(world.getSeed() + campPos.asLong() + gameTime());
-
-        int worldLevel = WorldLevel.getLevel(world);
-        if (worldLevel > 0) {
-            ShadeMod.LOGGER.debug("[shadecamp] 世界等级 {}, 怪物强化", WorldLevel.getName(worldLevel));
-        }
+    /**
+     * 生成据点配置的怪物
+     */
+    private void spawnCampMobs(Camp camp, List<BlockPos> spawnPoints, Random random, int worldLevel) {
+        int spawnedCount = 0;
 
         for (Map.Entry<String, Integer> entry : camp.getMobConfig().entrySet()) {
             String entityId = entry.getKey();
             int count = entry.getValue();
-
-            ShadeMod.LOGGER.debug("[shadecamp]   - 生成: {} × {}", entityId, count);
 
             EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(entityId));
             if (entityType == null) {
@@ -659,60 +682,74 @@ public class CampManager {
             }
 
             for (int i = 0; i < count; i++) {
-                BlockPos spawnPos = spawnPoints.get(random.nextInt(spawnPoints.size()));
-
-                Entity entity = entityType.create(world);
-                if (entity != null) {
-                    entity.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-
-                    if (entity instanceof Mob mob) {
-                        mob.setPersistenceRequired();
-                        mob.setAggressive(true);
-                        WorldLevel.applyScaling(mob, worldLevel);
-
-                        // 锁定最近的玩家为目标
-                        ServerPlayer nearest = findNearestPlayer(camp);
-                        if (nearest != null) {
-                            mob.setTarget(nearest);
-                        }
-                    }
-
-                    world.addFreshEntity(entity);
-                    camp.addActiveEntity(entity);
-                    ShadeMod.LOGGER.debug("[shadecamp]     → {} @ [{}, {}, {}]",
-                            entityId, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
-                } else {
-                    ShadeMod.LOGGER.warn("[shadecamp]     → 实体创建失败 (create 返回 null)");
-                }
+                if (spawnPoints.isEmpty()) break;
+                spawnedCount += spawnSingleMob(camp, entityType, spawnPoints.get(random.nextInt(spawnPoints.size())), worldLevel);
             }
         }
 
-        ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", camp.getActiveMobIds().size());
-        // 世界等级额外怪物
-        if (worldLevel > 0) {
-            var configTypes = camp.getMobConfig().keySet().toArray(new String[0]);
-            for (int wl = 0; wl < worldLevel; wl++) {
-                for (String eid : configTypes) {
-                    var xt = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(eid));
-                    if (xt == null) continue;
-                    Entity xe = xt.create(world);
-                    if (xe != null) {
-                        BlockPos sp = spawnPoints.get(random.nextInt(spawnPoints.size()));
-                        xe.setPos(sp.getX() + 0.5, sp.getY(), sp.getZ() + 0.5);
-                        if (xe instanceof Mob xm) {
-                            xm.setPersistenceRequired();
-                            xm.setAggressive(true);
-                            WorldLevel.applyScaling(xm, worldLevel);
-                            ServerPlayer nearest = findNearestPlayer(camp);
-                            if (nearest != null) xm.setTarget(nearest);
-                        }
-                        world.addFreshEntity(xe);
-                        camp.addActiveEntity(xe);
-                    }
-                }
+        ShadeMod.LOGGER.debug("[shadecamp] 共计生成 {} 只怪物", spawnedCount);
+    }
+
+    /**
+     * 世界等级提供的额外怪物（每级每类额外生成一只）
+     */
+    private void spawnWorldLevelBonusMobs(Camp camp, List<BlockPos> spawnPoints, Random random, int worldLevel) {
+        if (worldLevel <= 0 || spawnPoints.isEmpty()) return;
+
+        ShadeMod.LOGGER.debug("[shadecamp] 世界等级 {}, 生成额外怪物", WorldLevel.getName(worldLevel));
+
+        var configTypes = camp.getMobConfig().keySet().toArray(new String[0]);
+        int extraCount = 0;
+
+        for (int wl = 0; wl < worldLevel; wl++) {
+            for (String eid : configTypes) {
+                var entityType = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(eid));
+                if (entityType == null) continue;
+
+                extraCount += spawnSingleMob(camp, entityType, spawnPoints.get(random.nextInt(spawnPoints.size())), worldLevel);
             }
         }
 
+        if (extraCount > 0) {
+            ShadeMod.LOGGER.debug("[shadecamp] 世界等级额外生成 {} 只怪物", extraCount);
+        }
+    }
+
+    /**
+     * 生成单个怪物实体，应用世界等级缩放并锁定目标
+     *
+     * @return 1（生成成功）或 0（失败）
+     */
+    private int spawnSingleMob(Camp camp, EntityType<?> entityType, BlockPos spawnPos, int worldLevel) {
+        Entity entity = entityType.create(world);
+        if (entity == null) {
+            ShadeMod.LOGGER.warn("[shadecamp] 实体创建失败 (create 返回 null)");
+            return 0;
+        }
+
+        entity.setPos(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
+
+        if (entity instanceof Mob mob) {
+            mob.setPersistenceRequired();
+            mob.setAggressive(true);
+            WorldLevel.applyScaling(mob, worldLevel);
+
+            ServerPlayer nearest = findNearestPlayer(camp);
+            if (nearest != null) {
+                mob.setTarget(nearest);
+            }
+        }
+
+        world.addFreshEntity(entity);
+        camp.addActiveEntity(entity);
+        return 1;
+    }
+
+    /**
+     * 完成据点激活：播放效果、设置状态、Boss Bar、保存
+     */
+    private void finalizeActivation(Camp camp, int worldLevel) {
+        BlockPos campPos = camp.getBlockPos();
 
         // 播放激活效果
         CampRewardHandler.playActivationEffects(world, Vec3.atCenterOf(
@@ -729,7 +766,6 @@ public class CampManager {
         // 创建 BOSS 进度条并同步给范围内的玩家
         camp.getOrCreateBossBar();
         List<ServerPlayer> playersInRange = getPlayersInRange(camp);
-        ShadeMod.LOGGER.debug("[shadecamp] 范围内玩家: {} 人", playersInRange.size());
         camp.syncBossBarPlayers(playersInRange, camp.getActiveMobIds().size());
 
         save();

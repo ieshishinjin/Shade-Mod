@@ -1,0 +1,497 @@
+{
+    "id": "chapter2_forest_whispers",
+    "title": "第二章：林中密语",
+    "description": "晨曦营地东边的低语森林最近传出异样的声响——树木在低语，迷雾中隐约有身影移动。阿卡娅希望你调查这片森林深处，寻找异常的源头。",
+    "start_node": "start",
+    "requires_completed": ["chapter1_wake_up"],
+    "nodes": {
+        "start": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "晨曦的阳光洒在营地上，你整理好装备走出小屋。\n西边哨站的任务已经完成，但你心中总有一个声音在提醒你——这个世界远比想象中广阔。",
+            "next": "akaya_call"
+        },
+        "akaya_call": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「你来得正好！我正想找你。」\n阿卡娅从营地东边的瞭望台上快步走下来，神色比平时严肃了几分。",
+            "next": "forest_setup"
+        },
+        "forest_setup": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「营地向东大约走两天的路程，有一片叫『低语森林』的地方。\n本来那里很安静，但最近......」\n她顿了顿，似乎在斟酌用词。",
+            "next": "forest_problem"
+        },
+        "forest_problem": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「巡逻队报告说，那片森林在『说话』。不是风声，不是动物声——是真正的低语声。\n而且，进去调查的三个人，只有一个回来了。」",
+            "next": "forest_reaction_choice"
+        },
+        "forest_reaction_choice": {
+            "type": "CHOICE",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "她直视着你的眼睛：\n「我需要一个靠得住的人。你愿意去一趟吗？」",
+            "options": [
+                {
+                    "label": "「当然，我去看看。」",
+                    "next": "accept_mission",
+                    "flags": {"accepted_ch2_quest": true, "ch2_brave": true}
+                },
+                {
+                    "label": "「低语？会不会是听错了？」",
+                    "next": "skeptical_approach",
+                    "flags": {"ch2_skeptical": true}
+                },
+                {
+                    "label": "「回来的那个人说了什么？」",
+                    "next": "ask_details",
+                    "flags": {"ch2_inquisitive": true}
+                }
+            ]
+        },
+        "skeptical_approach": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「我也希望是听错了。但那个回来的人——他一直在重复同一句话。」\n她的声音低了下去：「『树在叫我的名字。』」",
+            "next": "accept_mission"
+        },
+        "ask_details": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「他......不太好。一直缩在角落，嘴里念叨着什么『树根下面有东西』。\n医疗队说他受了强烈的精神冲击，可能需要好几周才能恢复。」\n她摇了摇头，神情凝重。",
+            "next": "accept_mission"
+        },
+        "accept_mission": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「好，我就知道你靠得住。」\n她从腰间解下一枚泛着微光的吊坠，递到你手中。",
+            "next": "give_talisman"
+        },
+        "give_talisman": {
+            "type": "EVENT",
+            "text": "阿卡娅递给你一枚温暖的木质吊坠。",
+            "event": {
+                "type": "give_item",
+                "value": "minecraft:golden_apple",
+                "params": {
+                    "count": 1
+                }
+            },
+            "next": "talisman_explain"
+        },
+        "talisman_explain": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「这是用晨曦营地边上的古树心材做的护身符，带着它，能抵御一些......不干净的东西。」\n她笑了笑，但笑容里有一丝忧虑。",
+            "next": "quest_start_node"
+        },
+        "quest_start_node": {
+            "type": "QUEST_START",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「你的任务是：找到森林异变的源头。可能需要先穿过低语森林外围，到达中心区域。\n注意那些被腐化的生物——它们已经不是普通的动物了。」",
+            "quest": {
+                "quest_id": "investigate_whispering_forest",
+                "quest_name": "§5调查低语森林",
+                "quest_description": "前往晨曦营地以东的低语森林，调查异象的源头。到达森林中心区域并清除腐化之源。",
+                "objectives": [
+                    {
+                        "type": "REACH_LOCATION",
+                        "targetId": "forest_edge",
+                        "count": 1,
+                        "displayText": "到达低语森林边缘"
+                    },
+                    {
+                        "type": "KILL_MOB",
+                        "targetId": "minecraft:zombie",
+                        "count": 8,
+                        "displayText": "击杀被腐化的生物 × 8"
+                    },
+                    {
+                        "type": "REACH_LOCATION",
+                        "targetId": "forest_heart",
+                        "count": 1,
+                        "displayText": "到达森林中心"
+                    }
+                ],
+                "rewards": {
+                    "exp": 120,
+                    "items": ["minecraft:iron_sword:1", "minecraft:enchanted_golden_apple:1"],
+                    "flags": {"completed_ch2_investigation": "true"}
+                },
+                "on_quest_complete": "quest_complete_dialog",
+                "on_quest_fail": "quest_fail_dialog"
+            },
+            "next": "forest_warning"
+        },
+        "forest_warning": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「还有一件事——如果进入森林深处后听到了有人叫你的名字，不要回头，不要应答。\n直接往前走。」\n她的语气不容置疑。",
+            "next": "stranger_encounter_cond"
+        },
+        "stranger_encounter_cond": {
+            "type": "CONDITION",
+            "condition": {
+                "type": "FLAG_CHECK",
+                "targetId": "ch2_skeptical",
+                "value": 1,
+                "operator": "==",
+                "nextIfTrue": "akaya_challenge",
+                "nextIfFalse": "departure"
+            }
+        },
+        "akaya_challenge": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「我知道你在想什么——『这怎么可能』。」\n她微微一笑，但眼神很认真。\n「我曾经也不信。直到我亲眼看到那片森林吞噬了一个人的影子。」",
+            "next": "departure"
+        },
+        "departure": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你整理好行装，告别了阿卡娅，踏上了前往东方的路。\n风中隐隐约约传来什么声音——是树木在窃窃私语吗？\n还是你的心跳声？",
+            "next": "forest_edge_arrival"
+        },
+        "forest_edge_arrival": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "两天的路程在你的脚下缩短。\n当你看到前方那片灰雾笼罩的林地时，你知道——你到了。\n\n低语森林的入口处立着一块古老的石碑，上面刻着模糊的文字。",
+            "next": "examine_stone"
+        },
+        "examine_stone": {
+            "type": "CHOICE",
+            "speaker": "叙述",
+            "text": "石碑上刻着文字，但大部分已经被风化和苔藓覆盖。\n你隐约认出几个字：",
+            "options": [
+                {
+                    "label": "仔细辨认碑文",
+                    "next": "read_stone_1",
+                    "flags": {"ch2_read_stone": true}
+                },
+                {
+                    "label": "直接进入森林",
+                    "next": "enter_forest_direct",
+                    "flags": {"ch2_enter_direct": true}
+                }
+            ]
+        },
+        "read_stone_1": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你拨开苔藓，勉强读出了碑文的内容：\n\n「于低语之地，心诚则明。\n迷失者入，坚定者出。\n万籁俱寂之时，真相自现。」\n\n底部似乎还有一个标记——那是一棵古老的橡树图案。",
+            "next": "enter_forest_cont"
+        },
+        "enter_forest_direct": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你没有在石碑前多做停留，径直踏入了森林。\n雾气在你脚下翻滚，树木的枝叶在头顶交叉成一张密不透风的网。\n身后的光线越来越远。",
+            "next": "forest_mist"
+        },
+        "enter_forest_cont": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你将碑文记在心中，深吸一口气，跨过了森林的边界。\n就在你踏入的瞬间，周围的声音仿佛被什么东西抽走了——\n世界安静得可怕。",
+            "next": "forest_mist"
+        },
+        "forest_mist": {
+            "type": "DIALOG",
+            "speaker": "???",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「喂——那边的！」\n一个急促的声音从侧面传来。\n你猛地转身，看到雾气中有一个身影——那人手中握着一张弓，箭头正对着你身后的方向。",
+            "next": "stranger_intro"
+        },
+        "stranger_intro": {
+            "type": "DIALOG",
+            "speaker": "???",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「别动——」\n一声弦响，一支箭从你耳边呼啸而过。\n你身后传来什么重物倒地的闷响。你转过身，看到一只浑身缠绕着黑色雾气的野狼倒在几米外。",
+            "next": "stranger_meet"
+        },
+        "stranger_meet": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「呼——好险。你没事吧？」\n那人收起弓，从雾气中走出来。\n那是一个年轻的猎手，穿着深绿色的斗篷，腰间挂着一串写满符文的木牌。",
+            "next": "stranger_talk"
+        },
+        "stranger_talk": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「我是菲恩，在这片森林附近住了大半辈子。\n这几天林子里的情况越来越不对劲了——腐化生物的数量翻了十倍不止。」\n他皱着眉，看向森林深处。",
+            "next": "fen_intro_choice"
+        },
+        "fen_intro_choice": {
+            "type": "CHOICE",
+            "speaker": "你",
+            "text": "你要怎么回应菲恩？",
+            "options": [
+                {
+                    "label": "「我是从晨曦营地来的，来调查森林异变。」",
+                    "next": "ally_path",
+                    "flags": {"ch2_ally_fen": true}
+                },
+                {
+                    "label": "「你一直住在这里？知道森林中间有什么吗？」",
+                    "next": "info_path",
+                    "flags": {"ch2_ask_fen": true}
+                }
+            ]
+        },
+        "ally_path": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「晨曦营地？你们总算派人来了。」\n他的表情明显放松了一些。\n「太好了，我正愁一个人搞不定呢。这片森林需要一个向导——如果你愿意，我可以带你走安全的路线。」",
+            "next": "fen_join"
+        },
+        "info_path": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「森林中间......」\n他的表情阴郁下来。\n「如果我的推测没错，那里有一棵被腐化的古树——所有的低语都是从那里传出来的。我试着接近过两次，都被逼退了回来。」",
+            "next": "fen_join"
+        },
+        "fen_join": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「不管你是为了什么来的——一个人走这片森林都不安全。我正好要去找腐化的源头，一起走吧？」\n他伸出手，露出手腕上的一串编绳。\n「放心，我熟悉这里的每一寸土地。」",
+            "next": "journey_deeper"
+        },
+        "journey_deeper": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你和菲恩一同深入森林。\n周围的树木越来越扭曲，雾气中偶尔闪过可疑的影子。\n远处传来若有若无的低语声——像是很多人同时在说话，又像是风声穿过树洞。",
+            "next": "whispers_start"
+        },
+        "whispers_start": {
+            "type": "CHOICE",
+            "speaker": "叙述",
+            "text": "低语声越来越清晰了。你似乎听到了自己的名字！\n菲恩的呼吸急促起来，他握紧了弓。",
+            "options": [
+                {
+                    "label": "「你听到了吗？」",
+                    "next": "fen_response_1",
+                    "flags": {"ch2_confirm_whispers": true}
+                },
+                {
+                    "label": "无视低语，继续前进",
+                    "next": "push_forward",
+                    "flags": {"ch2_ignore_whispers": true}
+                }
+            ]
+        },
+        "fen_response_1": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「嗯。它们在叫我的名字——用我母亲的声音。」\n他的声音有些发颤，但脚步没有停下。\n「别理它们。阿卡娅说得对——不要回应，不要回头。」",
+            "next": "push_forward"
+        },
+        "push_forward": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你和菲恩并肩前行，脚下的路越来越狭窄。\n周围的树木上开始出现一种黑色的苔藓，散发着淡淡的腐臭味。\n低语声越来越大——但你始终没有回头。",
+            "next": "arrival_heart"
+        },
+        "arrival_heart": {
+            "type": "EVENT",
+            "text": "森林中央出现了一片空地。",
+            "event": {
+                "type": "play_sound",
+                "value": "minecraft:entity.warden.heartbeat",
+                "params": {
+                    "volume": 1.0
+                }
+            },
+            "next": "corrupted_tree"
+        },
+        "corrupted_tree": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "森林中央是一棵巨大的橡树——或者说，曾经是。\n黑色的藤蔓缠绕着树干，树冠上倒挂着某种暗紫色的结晶体，\n像心脏一样在有节奏地跳动着。每一次跳动，都有一圈暗色的涟漪向四周扩散。",
+            "next": "fen_awed"
+        },
+        "fen_awed": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「这就是了......」\n他的声音几乎是耳语。「腐化的源头。那些低语——都是从这棵树的树根下发出的。\n我能感觉到......有什么东西在下面。」",
+            "next": "final_choice"
+        },
+        "final_choice": {
+            "type": "CHOICE",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "他看向你：\n「你来做决定。我们要怎么做？」",
+            "options": [
+                {
+                    "label": "「烧了它——斩草除根。」",
+                    "next": "burn_choice",
+                    "flags": {"ch2_burn_tree": true}
+                },
+                {
+                    "label": "「先调查树根下面有什么。」",
+                    "next": "investigate_roots",
+                    "flags": {"ch2_examine_roots": true}
+                }
+            ]
+        },
+        "burn_choice": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「好——直接解决问题。」\n他从背包里取出一个油壶和打火石。\n「这片森林需要一场净化。你来点火，我在后面掩护你。」",
+            "next": "climax_battle"
+        },
+        "investigate_roots": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「也好，先弄清楚我们面对的是什么。」\n他蹲下身，拨开树根旁的泥土。\n「帮我盯着周围——我觉得这东西不会让我们轻易窥探它的秘密。」",
+            "next": "climax_battle"
+        },
+        "climax_battle": {
+            "type": "EVENT",
+            "text": "就在你们行动的瞬间，树根猛地从地面炸开！",
+            "event": {
+                "type": "command",
+                "value": "summon minecraft:zombie ~ ~ ~ {PersistenceRequired:1b, CustomName:'\"腐化守卫\"', Attributes:[{Name:\"generic.max_health\",Base:40}]}",
+                "params": {}
+            },
+            "next": "fen_fight"
+        },
+        "fen_fight": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「小心——！」\n菲恩拉开弓，一箭射向破土而出的腐化怪物。\n「我来拖住它！你快去——不管是要烧还是挖——快动手！」",
+            "next": "quest_target_update"
+        },
+        "quest_target_update": {
+            "type": "QUEST_UPDATE",
+            "text": "目标更新：击败腐化守卫，净化古树之根！",
+            "next": "battle_aftermath_cond"
+        },
+        "battle_aftermath_cond": {
+            "type": "CONDITION",
+            "condition": {
+                "type": "FLAG_CHECK",
+                "targetId": "ch2_burn_tree",
+                "value": 1,
+                "operator": "==",
+                "nextIfTrue": "purify_fire",
+                "nextIfFalse": "purify_light"
+            }
+        },
+        "purify_fire": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "火焰沿着黑色的藤蔓蔓延，发出刺耳的嘶鸣声。\n那些暗紫色的结晶体在高温中炸裂开来，化为黑色的烟尘消散在空中。\n古树发出了一声低沉的呻吟——仿佛是终于解脱了的叹息。\n低语声停止了。森林安静了下来。",
+            "next": "victory"
+        },
+        "purify_light": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你拨开泥土和藤蔓，在树根下发现了一枚散发着微弱光芒的种子。\n当你触碰到它的瞬间，一股温暖的力量从指尖涌遍全身。\n黑色的腐化物质像被阳光照射的雾气一样消散了。\n古树的叶片重新泛起了绿色。低语声化为了一声温柔的叹息。",
+            "next": "victory"
+        },
+        "victory": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「......结束了。」\n菲恩收起弓，擦了擦额头的汗水。空气中弥漫着烧焦的气味和新生泥土的芬芳。\n「你得让阿卡娅知道这里发生了什么。这片森林——也许有一天会重新活过来。」",
+            "next": "fen_farewell"
+        },
+        "fen_farewell": {
+            "type": "CHOICE",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "他笑了笑，向你伸出手：\n「我打算继续留在森林里，确保没有残余的腐化。你呢？」",
+            "options": [
+                {
+                    "label": "「我得回营地复命。后会有期。」",
+                    "next": "return_to_camp",
+                    "flags": {"ch2_return_camp": true}
+                },
+                {
+                    "label": "「我跟你一起。这片森林还没完全安全。」",
+                    "next": "stay_with_fen",
+                    "flags": {"ch2_stay_forest": true}
+                }
+            ]
+        },
+        "return_to_camp": {
+            "type": "DIALOG",
+            "speaker": "叙述",
+            "portrait": "",
+            "text": "你和菲恩击掌告别。\n你转身踏上归途，晨光从树缝间洒落，在地面上投下斑驳的光影。\n低语森林的雾气正在慢慢散去。",
+            "next": "chapter2_end"
+        },
+        "stay_with_fen": {
+            "type": "DIALOG",
+            "speaker": "菲恩",
+            "portrait": "shade:textures/gui/portrait/avatar5.png",
+            "text": "「好——有你帮忙，三天之内就能把残余的腐化清理干净。」\n他的笑容中带着感激。\n「之后我陪你一起回晨曦营地，我正好有些事情想和阿卡娅谈谈。」",
+            "next": "chapter2_end"
+        },
+        "chapter2_end": {
+            "type": "END",
+            "text": "§5§l第二章：林中密语 · 完\n\n森林的低语已经沉寂，但你知道——这个世界的秘密远不止于此。\n阿卡娅还知道些什么？那些黑色的腐化从何而来？\n答案，在更远的地方等待着你......"
+        },
+        "quest_complete_dialog": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「你做到了......我就知道你能做到。」\n她的声音里带着如释重负的轻松。\n「菲恩已经把森林里发生的事告诉我了。你不仅找到了腐化的源头，还净化了它。」",
+            "next": "quest_complete_reward"
+        },
+        "quest_complete_reward": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「你比我想象中要强得多。」\n她从怀中取出一封用火漆封印的信。\n「这封信——等你准备好了，打开它。它会带你去该去的地方。」\n你接过信，信封上写着一个你从未听过地名：§e暮色要塞§r。",
+            "next": "ch2_complete_end"
+        },
+        "ch2_complete_end": {
+            "type": "END",
+            "text": "§5§l第二章：林中密语 · 完\n\n你带着新的目标回到了晨曦营地。\n暮色要塞——那是什么地方？阿卡娅还隐藏着什么秘密？\n但至少现在，你有了一个可以依靠的伙伴，和一段属于你自己的故事。"
+        },
+        "quest_fail_dialog": {
+            "type": "DIALOG",
+            "speaker": "阿卡娅",
+            "portrait": "shade:textures/gui/portrait/avatar11.png",
+            "text": "「你回来就好。低语森林的事我听说了——那棵古树的腐化比我们预想的更深。」\n她拍了拍你的肩膀。\n「休息几天，我们再想办法。」",
+            "next": "quest_fail_end"
+        },
+        "quest_fail_end": {
+            "type": "END",
+            "text": "低语森林的腐化暂时没有扩散，但也没有消失。\n你知道，这个问题还会再来的。\n而下次——你会准备得更充分。"
+        }
+    }
+}
