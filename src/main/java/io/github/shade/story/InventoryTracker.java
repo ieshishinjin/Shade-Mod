@@ -54,8 +54,13 @@ public class InventoryTracker {
 
                 if (currentCount > lastCount) {
                     int delta = currentCount - lastCount;
-                    // 通知 Quest 系统（日志已移除，减少控制台输出）
+                    // 通知 Quest 系统
                     AdapterRegistry.notifyProgress(player, "COLLECT_ITEM", itemId, delta);
+
+                    // 通知触发器系统（物品拾取触发）
+                    // 由 InventoryTracker 统一检测，避免 TriggerManager 重复扫描背包
+                    var triggerManager = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
+                    triggerManager.checkItemPickup(player, itemId);
                 }
             }
         }
