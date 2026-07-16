@@ -2,12 +2,13 @@ package io.github.shade.client.aigen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class AiControlScreen extends Screen {
 
-    private String promptText = "";
+    private EditBox promptInput;
 
     // ——— 配色 ———
     private static final int C_PANEL     = 0xE0181A2E;
@@ -81,9 +82,18 @@ public class AiControlScreen extends Screen {
                 b -> runCmd("story ai maxtokens 2048")));
 
         // ▶ 生成剧情
+        int iw = pw - 28; // 输入框宽度
+        promptInput = new EditBox(font, x, py + 187, iw, 18, Component.literal("剧情描述"));
+        promptInput.setMaxLength(300);
+        promptInput.setHint(Component.literal("输入剧情描述..."));
+        promptInput.setTextColor(0xFFE8E8F0);
+        promptInput.setTextColorUneditable(0xFF5A5A7A);
+        addRenderableWidget(promptInput);
+
         addRenderableWidget(new ThemeButton(cx - 48, y4, 96, 24, "▶ 生成剧情", C_ACCENT, 0xFFFFFFFF, true, false,
                 b -> {
-                    if (!promptText.isEmpty()) runCmd("story ai generate " + promptText);
+                    String text = promptInput.getValue().trim();
+                    if (!text.isEmpty()) runCmd("story ai generate " + text);
                 }));
 
         // 底部操作栏
@@ -130,13 +140,6 @@ public class AiControlScreen extends Screen {
         sep(g, x, py + 166);
         drawLabel(g, "生成剧情", x, py + 176, C_MUTED);
 
-        // 输入框
-        int iy = py + 187;
-        g.fill(x, iy, px + pw - 14, iy + 20, C_INPUT);
-        g.fill(x, iy, px + pw - 14, iy + 1, C_ACCENT);
-        String display = promptText.isEmpty() ? "输入剧情描述..." : promptText;
-        drawText(g, display, x + 5, iy + 6, promptText.isEmpty() ? 0xFF5A5A7A : C_TEXT);
-
         // 底部
         sep(g, x, py + 220);
         drawText(g, "AI Studio v0.1", px + pw - 76, py + ph - 11, 0xFF4A4A6A);
@@ -167,15 +170,21 @@ public class AiControlScreen extends Screen {
     @Override
     public boolean keyPressed(int k, int s, int m) {
         if (k == 256) { onClose(); return true; }
-        if (k == 257 || k == 335) {
-            if (!promptText.isEmpty())
-                runCmd("story ai generate " + promptText);
-            return true;
+        if (promptInput.isFocused()) {
+            if (k == 257 || k == 335) {
+                String text = promptInput.getValue().trim();
+                if (!text.isEmpty()) runCmd("story ai generate " + text);
+                return true;
+            }
+            return promptInput.keyPressed(k, s, m);
         }
-        if (k == 259 && !promptText.isEmpty()) promptText = promptText.substring(0, promptText.length() - 1);
-        char c = (k >= 32 && k <= 126) ? (char) k : 0;
-        if (c != 0 && promptText.length() < 300) promptText += c;
         return super.keyPressed(k, s, m);
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (promptInput != null) promptInput.setFocused(false);
+        return super.mouseClicked(mx, my, btn);
     }
 
     @Override public boolean shouldCloseOnEsc() { return true; }

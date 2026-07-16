@@ -27,12 +27,20 @@ public class ShadeMod implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Shade 模组初始化...");
 
-        CampEventHandler.register();
-        StoryEventHandler.register();
-        StoryPayloads.register();
+        // 所有 register() 调用集中于此，按模块归类
+        // 每个模块的 register() 负责注册该模块所需的 Fabric 事件监听器
 
-        // 注册游戏系统适配器
-        AdapterRegistry.register(new CampAdapter());
+        // — 生命周期 & 事件 —
+        CampEventHandler.register();   // 据点系统（刷怪禁用、Tick、Camp 生命周期）
+        StoryEventHandler.register();  // 故事系统（脚本加载、Quest、触发器、合成/击杀事件）
+
+        // — 网络包 —
+        StoryPayloads.register();      // S2C/C2S 自定义数据包
+
+        // — 适配器 —
+        AdapterRegistry.register(new CampAdapter());  // 游戏系统→剧情框架 桥接
+
+        // — 命令 —
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             CampCommand.register(dispatcher);
             StoryCommand.register(dispatcher);
