@@ -66,8 +66,10 @@ public class CampAdapter implements SystemAdapter {
         return switch (objectiveType) {
             case "OCCUPY_CAMP", "DEFEND_CAMP" -> 1;
             case "ATTACK_CAMP" -> {
-                // 需要查 CampManager 获取总怪物数
-                yield 1; // 默认值，实际会被覆盖
+                // 需要查 CampManager 获取总怪物数，但 getMaxProgress 接口未提供 world/player 上下文
+                // TODO: 将 SystemAdapter.getMaxProgress 签名改为 getMaxProgress(ServerPlayer, String, String)
+                //       以便查询 CampManager.getInstance(player.serverLevel())
+                yield 1;
             }
             default -> 1;
         };
