@@ -30,6 +30,9 @@ public class GenerationQueue {
     /** 当前是否正在处理队列 */
     private boolean processing = false;
 
+    /** 每位玩家的最后提交时间 */
+    private final Map<UUID, Long> lastSubmissionTime = new ConcurrentHashMap<>();
+
     /** 两次生成之间的最小间隔（毫秒） */
     private static final long MIN_INTERVAL_MS = 30000; // 30秒
 
@@ -61,8 +64,14 @@ public class GenerationQueue {
             return false;
         }
 
-        // 检查最小间隔
+        // 检查最小间隔（每位玩家独立）
         long now = System.currentTimeMillis();
+        Long lastTime = lastSubmissionTime.get(uuid);
+        if (lastTime != null && (now - lastTime) < MIN_INTERVAL_MS) {
+            ShadeMod.LOGGER.debug("[ai-queue] 玩家 {} 请求过快，节流跳过", player.getName().getString());
+            return false;
+        }
+        lastSubmissionTime.put(uuid, now);
 
         // 加入队列
         queue.put(uuid, new QueuedRequest(task, reason, now));

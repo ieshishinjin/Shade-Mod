@@ -39,8 +39,8 @@ public class AutoStoryGenerator {
     /** 每位玩家的最后生成时间 */
     private final Map<UUID, Long> lastGenerationTime = new ConcurrentHashMap<>();
 
-    /** 上次检查到的世界等级（用于检测变化） */
-    private int lastWorldLevel = -1;
+    /** 每位玩家的最后世界等级（用于检测变化） */
+    private final Map<UUID, Integer> perPlayerWorldLevel = new ConcurrentHashMap<>();
 
     /** 上次检查的游戏时间（用于定时触发） */
     private long lastGameTimeCheck = 0;
@@ -144,19 +144,22 @@ public class AutoStoryGenerator {
     }
 
     /**
-     * 检查世界等级变化
+     * 检查世界等级变化（每位玩家独立追踪）
      */
     private boolean checkWorldLevelChange(ServerLevel level, ServerPlayer player) {
         try {
             int currentLevel = WorldLevel.getLevel(level);
-            if (lastWorldLevel >= 0 && currentLevel > lastWorldLevel) {
-                // 世界等级提升了
-                lastWorldLevel = currentLevel;
+            UUID uuid = player.getUUID();
+            Integer lastLevel = perPlayerWorldLevel.get(uuid);
+
+            if (lastLevel != null && currentLevel > lastLevel) {
+                // 该玩家的世界等级提升了
+                perPlayerWorldLevel.put(uuid, currentLevel);
                 triggerAutoGenerate(player, "世界等级提升至 " + currentLevel + "，生成新挑战");
                 return true;
             }
-            if (lastWorldLevel < 0) {
-                lastWorldLevel = currentLevel;
+            if (lastLevel == null) {
+                perPlayerWorldLevel.put(uuid, currentLevel);
             }
         } catch (Exception ignored) {}
         return false;
