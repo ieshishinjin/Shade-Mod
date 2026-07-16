@@ -301,7 +301,10 @@ public class StoryEventHandler {
     private static void handleMobKill(ServerPlayer player, LivingEntity entity) {
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         AdapterRegistry.notifyProgress(player, "KILL_MOB", entityId, 1);
-        if (!(entity instanceof Monster)) {
+
+        // 检查是否是末影龙或凋灵（真正的 Boss）
+        if (entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon
+                || entity instanceof net.minecraft.world.entity.boss.wither.WitherBoss) {
             AdapterRegistry.notifyProgress(player, "KILL_BOSS", entityId, 1);
         }
 
