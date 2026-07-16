@@ -1,6 +1,6 @@
 # Minecraft Galgame 剧情系统 — 用户文档
 
-> 适用于 Shade Mod v0.0.3+
+> 适用于 Shade Mod v0.0.5+
 
 ---
 
@@ -47,9 +47,13 @@
 |--------|------|----------|
 | **R** | 打开剧情菜单 | ✅ 设置→按键绑定→Shade 模组 |
 | **U** | AI 剧情控制面板（详见 [AiGui.md](AiGui.md)） | ✅ 设置→按键绑定→Shade 模组 |
+| **L** | 打开任务日志（详见 §9） | ✅ 设置→按键绑定→Shade 模组 |
 | **G** | 打开画廊（剧情菜单内） | — |
 | **↑↓** | 选择剧本（剧情菜单内） | — |
 | **Enter** | 确认选择（剧情菜单内） | — |
+| **Shift+右键** | 与 NPC / 命名生物 AI 对话（详见 §10） | — |
+| **1~9** | 快速选择对话选项 | — |
+| **点击** | 跳过打字机效果 / 继续对话 / 关闭CG | — |
 
 按键绑定可在 Minecraft 设置 → 按键绑定 → "Shade 模组" 分类中修改。
 
@@ -119,7 +123,41 @@ Galgame 风格对话框，带打字机效果和头像：
 
 ---
 
-## 5. 画廊系统
+## 5. 任务日志界面
+
+按 **L** 打开任务日志，查看所有活跃任务和已完成任务：
+
+```
+┌────────────────────────────────────────────┐
+│              ✦ 任务日志                     │
+│  ────────────────                          │
+│  — 进行中 —                                │
+│  ▶ 侦察西边哨站          §6✦ 侦察西边哨站   │
+│  ○ 收集材料              §7前往营地以西...   │
+│                          ○ 到达西边哨站 [0/1]│
+│                          ○ 击杀掠夺者 [2/3] │
+│  ──────────────                            │
+│  已完成任务: 1             ↑↓ 选择 ESC 关闭 │
+└────────────────────────────────────────────┘
+```
+
+### 5.1 操作
+
+| 操作 | 方式 |
+|------|------|
+| 打开 | 按 **L** 键 |
+| 选择任务 | 按 **↑ / ↓** |
+| 关闭 | 按 **ESC** |
+
+### 5.2 显示内容
+
+- **左侧**：所有进行中任务列表，▶ 表示当前追踪
+- **右侧**：选中任务的详情，含描述和 Objective 进度
+- **底部**：已完成任务计数
+
+---
+
+## 6. 画廊系统
 
 ### 5.1 命令
 
@@ -137,13 +175,111 @@ Galgame 风格对话框，带打字机效果和头像：
 - 目前内置 4 个示例条目（2 CG + 2 结局）
 - 画廊条目在脚本 JSON 中配置
 
+### 5.3 多分支结局
+
+根据玩家在剧情中的选择（Flag），解锁不同的结局条目：
+
+```json
+// 画廊条目支持 condition 字段控制解锁条件
+{
+    "condition": "accepted_first_quest=true"   // 仅当该 Flag 为 true 时解锁
+}
+```
+
+- 未达到条件的结局条目在画廊中显示为 `???`
+- 每次完成剧情时系统自动检查所有结局条件
+
 ---
 
-## 6. 触发器系统
+## 7. CG 展示系统
+
+剧情脚本中使用 `SHOW_CG` 事件类型展示全屏 CG 插画：
+
+```json
+{
+    "type": "EVENT",
+    "event": {
+        "type": "SHOW_CG",
+        "value": "shade:textures/gui/cg/wake_up.png",
+        "params": {
+            "title": "苏醒",
+            "fadeIn": 20
+        }
+    },
+    "next": "next_node"
+}
+```
+
+### 7.1 特性
+
+- **全屏展示**：CG 图片铺满整个屏幕
+- **淡入淡出**：打开时从黑屏淡入，点击后淡出
+- **标题文字**：CG 完全显示后显示标题
+- **自动推进**：CG 关闭后自动推进到下一剧情节点
+
+### 7.2 操作
+
+| 操作 | 效果 |
+|------|------|
+| **点击** | 关闭 CG（已显示完成后） |
+| **ESC** | 关闭 CG |
+
+---
+
+## 8. 世界事件系统
+
+游戏世界中会随机触发事件，AI 自动生成引导剧情：
+
+| 事件 | 说明 | AI 联动 |
+|------|------|---------|
+| **流星雨** 🌠 | 夜空划过流星，掉落特殊物品 | AI 生成"流星预示着什么"剧情 |
+| **怪物攻城** ⚔ | 大量怪物出现在玩家附近 | AI 生成"据点被攻击"引导剧情 |
+| **贸易车队** 🎪 | 神秘商队短暂出现 | AI 生成商队剧情 |
+
+- 事件间隔：至少 10 分钟
+- 触发时自动检测 AI 是否已配置
+- 如 AI 已启用，自动生成相关的引导剧情
+
+---
+
+## 9. Quest 系统
+
+剧情脚本中的 QUEST_START 节点会自动创建 Quest。
+
+### 9.1 进度追踪
+
+- 击杀怪物：自动追踪 KILL_MOB / KILL_BOSS 进度
+- 清空营地：自动追踪 OCCUPY_CAMP 进度（需 Camp 系统）
+- 到达位置：自动追踪 REACH_LOCATION 进度
+- 收集物品：自动追踪 COLLECT_ITEM 进度
+- 合成物品：自动追踪 CRAFT_ITEM 进度
+- 与村民交易：自动追踪 TRADE_VILLAGER 进度
+
+### 9.2 Quest 奖励
+
+支持三种奖励方式：
+
+1. 直接奖励：exp + items + flags
+2. 随机奖励池：rewardPool 中按 weight 权重随机抽取 poolSize 个
+3. 多选一奖励：choiceRewards 的选项列表，玩家点击选择
+
+示例：
+```
+/story complete              -- 强制完成当前 Quest
+/story flag set k v          -- 设置剧情 Flag
+/story choose_reward <key>   -- 选择多选一奖励
+```
+
+### 9.3 任务日志
+
+按 L 键打开任务日志界面（详见 §5）。
+
+
+## 10. 触发器系统
 
 触发器可以在满足条件时自动开始剧情，无需手动输入命令。
 
-### 6.1 区域触发
+### 10.1 区域触发
 
 当玩家进入指定矩形区域时自动触发：
 
@@ -151,12 +287,7 @@ Galgame 风格对话框，带打字机效果和头像：
 /story trigger add zone <名称> <脚本> <x1> <z1> <x2> <z2>
 ```
 
-示例：
-```
-/story trigger add zone enter_village chapter2 100 100 -100 -100
-```
-
-### 6.2 NPC 交互触发
+### 10.2 NPC 交互触发
 
 当玩家右键指定实体时触发：
 
@@ -164,12 +295,7 @@ Galgame 风格对话框，带打字机效果和头像：
 /story trigger add npc <名称> <脚本> <实体ID>
 ```
 
-示例：
-```
-/story trigger add npc talk_villager chapter2 minecraft:villager
-```
-
-### 6.3 物品拾取触发
+### 10.3 物品拾取触发
 
 当玩家拾取指定物品时触发：
 
@@ -177,246 +303,60 @@ Galgame 风格对话框，带打字机效果和头像：
 /story trigger add item <名称> <脚本> <物品ID>
 ```
 
-示例：
-```
-/story trigger add item get_book chapter2 minecraft:book
-```
-
-系统通过背包快照对比检测新物品。
-
-### 6.4 触发器管理
+### 10.4 触发器管理
 
 ```
-/story trigger list               — 列出所有触发器
-/story trigger remove <名称>      — 移除触发器
+/story trigger list               -- 列出所有触发器
+/story trigger remove <名称>      -- 移除触发器
 ```
 
----
+## 11. AI 剧情生成
 
-## 7. AI 剧情生成
+按 U 打开 AI 控制面板进行配置。支持 DeepSeek、Ollama。
 
-AI 生成器可根据游戏世界状态动态生成剧情内容。
+## 12. 命令大全
 
-### 7.1 配置
-
-按 **U** 打开 AI 控制面板进行配置，详见 [AiGui.md](AiGui.md)。
-
-支持 DeepSeek、Ollama 和任意 OpenAI 兼容 API（自定义）。
-
-### 7.2 免费服务商推荐
-
-`/story ai recommend` 查看所有推荐服务商：
-
-| 服务商 | 费用 | 推荐模型 | 一键填入 |
-|--------|------|----------|----------|
-| **智谱 AI** | ✅ 完全免费 | `glm-4-flash` | `/story ai recommend zhipu` |
-| **讯飞星火** | ✅ 完全免费 | `lite` | `/story ai recommend xunfei` |
-| **DeepSeek** | 💰 新用户赠额 | `deepseek-chat` | `/story ai recommend deepseek` |
-| **Mistral AI** | 💰 免费额度 | `mistral-tiny` | `/story ai recommend mistral` |
-| **Groq** | 💰 免费额度 | `llama3-70b-8192` | `/story ai recommend groq` |
-| **Hugging Face** | 💰 免费额度 | `Qwen2.5-72B` | `/story ai recommend huggingface` |
-
-选择服务商后自动填入 API 地址和模型名：
-```
-/story ai recommend zhipu          — 自动填入配置
-/story ai recommend zhipu open     — 打开官网注册链接
-```
-
-### 7.3 使用 AI 生成
-
-#### 方法 1：通过 GUI（推荐）
-
-按 **U** → 打开 AI 控制面板 → 输入剧情描述 → 点击 **「▶ 生成剧情」** 或按回车
-
-#### 方法 2：通过命令
-
-```
-/story ai generate "生成一段在营地的日常对话"
-```
-
-#### 方法 3：脚本中的 AI_GENERATE 节点
-
-在剧情脚本中使用 `AI_GENERATE` 类型节点，遇到时自动触发 AI 生成。
-
-### 7.4 AI 配置命令
-
-```
-/story ai status                   — 查看当前配置
-/story ai enable/disable           — 启用/禁用
-/story ai provider deepseek|ollama — 切换引擎
-/story ai key <key>                — 设置 API 密钥
-/story ai model <name>             — 设置模型
-/story ai endpoint <url>           — 设置 API 端点
-/story ai temperature <0.0~2.0>    — 设置温度
-/story ai maxtokens <num>          — 设置最大长度
-/story ai test                     — 测试连接
-/story ai autogen                  — 切换自动生成
-```
-
-### 7.5 AI 生成流程
-
-```
-玩家输入提示词
-    ↓
-收集游戏世界状态（所有适配器）
-    ↓
-构建 Prompt（含世界观、进度、上下文）
-    ↓
-调用 AI API（DeepSeek / Ollama）
-    ↓
-解析 JSON 返回 → 校验类型白名单 → ID 唯一性检查
-    ↓
-注入节点到当前剧情脚本
-    ↓
-展示给玩家
-```
-
----
-
-## 8. Quest 系统
-
-剧情脚本中的 `QUEST_START` 节点会自动创建 Quest。
-
-### 8.1 进度追踪
-
-- **击杀怪物**：自动追踪 `KILL_MOB` 目标进度
-- **清空营地**：自动追踪 `OCCUPY_CAMP` 目标进度（需 Camp 系统）
-- **到达位置**、**收集物品** 等可通过适配器扩展
-
-### 8.2 Quest 命令
-
-```
-/story complete                    — 强制完成当前所有活跃 Quest
-/story flag set <key> <value>     — 设置剧情 Flag
-```
-
----
-
-## 9. 命令大全
-
-### 9.1 剧情命令
-
-| 命令 | 说明 | 权限 |
-|------|------|------|
-| `/story start <脚本>` | 开始指定剧情 | 所有人 |
-| `/story status` | 查看当前剧情状态 | 所有人 |
-| `/story list` | 列出所有可用脚本 | 所有人 |
-| `/story advance` | 推进对话 | 所有人 |
-| `/story choose <索引>` | 选择选项 | 所有人 |
-| `/story complete` | 强制完成 Quest | 所有人 |
-| `/story flag set <key> <value>` | 设置 Flag | 所有人 |
-| `/story reset` | 重置所有进度 | 所有人 |
-| `/story reload` | 热加载脚本 | OP |
-
-### 9.2 画廊命令
+### 12.1 剧情命令
 
 | 命令 | 说明 |
 |------|------|
-| `/story gallery` | 画廊首页 |
-| `/story gallery list` | 全部条目 |
-| `/story gallery cg` | CG 列表 |
-| `/story gallery endings` | 结局列表 |
-| `/story gallery view <id>` | 查看条目 |
+| /story start <脚本> | 开始指定剧情 |
+| /story status | 查看状态 |
+| /story advance | 推进对话 |
+| /story choose <索引> | 选择选项 |
+| /story complete | 强制完成 Quest |
+| /story flag set <k> <v> | 设置 Flag |
+| /story choose_reward <key> | 选择多选一奖励 |
+| /story reset | 重置进度 |
+| /story reload | 热加载脚本 |
 
-### 9.3 触发器命令
-
-| 命令 | 说明 |
-|------|------|
-| `/story trigger list` | 列出触发器 |
-| `/story trigger add zone <name> <script> <x1> <z1> <x2> <z2>` | 区域触发 |
-| `/story trigger add npc <name> <script> <entity>` | NPC 触发 |
-| `/story trigger add item <name> <script> <item>` | 物品触发 |
-| `/story trigger remove <name>` | 移除触发器 |
-
-### 9.4 AI 命令
+### 12.2 画廊命令
 
 | 命令 | 说明 |
 |------|------|
-| `/story ai status` | 查看配置 |
-| `/story ai enable` / `disable` | 启用/禁用 |
-| `/story ai provider <引擎>` | 设置引擎 |
-| `/story ai key <key>` | 设置密钥 |
-| `/story ai model <模型>` | 设置模型 |
-| `/story ai endpoint <url>` | 设置端点 |
-| `/story ai temperature <值>` | 设置温度 |
-| `/story ai maxtokens <数>` | 设置最大长度 |
-| `/story ai test` | 测试连接 |
-| `/story ai generate [提示]` | 生成剧情 |
-| `/story ai autogen` | 自动生成开关 |
-| `/story ai recommend` | 查看免费服务商 |
-| `/story ai recommend <id>` | 选择并填入配置 |
-| `/story ai recommend <id> open` | 打开注册链接 |
+| /story gallery | 画廊首页 |
+| /story gallery list | 全部条目 |
+| /story gallery cg | CG 列表 |
+| /story gallery endings | 结局列表 |
+| /story gallery view <id> | 查看条目 |
 
----
+### 12.3 AI 命令
 
-## 10. 脚本格式
-
-### 10.1 基本结构
-
-```json
-{
-    "id": "chapter1_wake_up",
-    "title": "第一章：苏醒",
-    "description": "你在晨曦营地中醒来...",
-    "start_node": "start",
-    "nodes": { ... }
-}
-```
-
-### 10.2 节点类型
-
-| 类型 | 用途 |
+| 命令 | 说明 |
 |------|------|
-| `DIALOG` | 对话文本，点击继续 |
-| `CHOICE` | 选项分支 |
-| `QUEST_START` | 发布 Quest |
-| `QUEST_UPDATE` | 更新 Quest 进度 |
-| `QUEST_COMPLETE` | 完成 Quest |
-| `CONDITION` | 条件判断跳转 |
-| `EVENT` | 游戏事件（传送、给物品等） |
-| `END` | 章节结束 |
-| `AI_GENERATE` | AI 动态生成（预留） |
-
-### 10.3 示例节点
-
-```json
-{
-    "id": "npc_intro",
-    "type": "DIALOG",
-    "speaker": "阿卡娅",
-    "portrait": "shade:textures/gui/portrait/avatar11.png",
-    "text": "「这里是晨曦营地。」\n她微笑着说道。",
-    "next": "world_explain"
-}
-```
-
-```json
-{
-    "id": "choice_1",
-    "type": "CHOICE",
-    "speaker": "系统",
-    "text": "你要怎么做？",
-    "options": [
-        {"label": "答应", "next": "accept", "flags": {"accepted": true}},
-        {"label": "拒绝", "next": "decline"}
-    ]
-}
-```
-
-### 10.4 完整脚本参考
-
-见 `assets/shade/story/chapter1_wake_up.json`
+| /story ai status | 查看配置 |
+| /story ai enable/disable | 启用/禁用 |
+| /story ai provider <引擎> | 设置引擎 |
+| /story ai key <key> | 设置密钥 |
+| /story ai model <模型> | 设置模型 |
+| /story ai generate [提示] | 生成剧情 |
+| /story ai autogen | 自动生成开关 |
+| /story ai recommend | 查看免费服务商 |
 
 ---
 
 ## 文件结构
 
-```
-Shade Mod v0.0.3
-├── 服务端 33 文件
-├── 客户端 4 文件
-└── 资源文件 4 文件
-    ├── assets/shade/lang/           — 国际化
-    ├── assets/shade/story/          — 剧情脚本
-    └── assets/shade/textures/gui/portrait/  — 头像
-```
+Shade Mod v0.0.5
+
+服务端 55+ 文件 | 客户端 7 文件 | 资源 8+ 文件

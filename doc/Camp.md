@@ -145,8 +145,30 @@ PendingCamps → 区块加载 → world.isLoaded()
 ```
 
 ---
+## 六、据点类型
 
-## 六、怪物配置
+据点分为 4 种类型，由生成算法根据距离出生点的远近决定：
+
+| 类型 | 生成概率 | 特点 | Boss Bar 颜色 | 战利品 |
+|------|---------|------|--------------|-------|
+| NORMAL | ~60% | 标准怪物营地，多种怪物组合 | 绿色 | camp_common |
+| BOSS | ~10% | 含强化Boss怪物，更多怪物 | 红色 | camp_epic |
+| RESOURCE | ~15% | 少量弱怪 + 矿物资源宝箱 | 金色 | camp_resource |
+| PUZZLE | ~15% | 中等数量怪物 + 特殊宝藏 | 紫色 | camp_rare |
+
+### 6.1 距离决定
+- 出生点 500 格内：主要为 NORMAL 和 RESOURCE
+- 500~1500 格：可能出现所有类型
+- 1500 格外：BOSS 概率增加
+
+### 6.2 自定义创建
+通过命令指定类型：
+```
+/camp create 我的营地 BOSS
+```
+省略类型参数时默认创建 NORMAL。
+
+## 七、怪物配置
 
 ### 6.1 生物群系 → 怪物池
 
@@ -206,13 +228,30 @@ stateDiagram-v2
 
 ---
 
-## 七、Boss Bar 进度条
+## 八、动态事件
+
+已清空的据点在一定时间后可能被重新激活。
+
+### 8.1 定时刷新
+设置了 refreshTime 的据点会在时间到达后自动重置。
+
+### 8.2 动态重新占领
+未设置刷新时间的据点，清空后 10 分钟起每 30 秒有 2% 概率重新占领。
+重新占领时通知附近玩家。
+
+### 8.3 营地联动
+清空据点时，附近 50 格内其他据点增强：
+- 怪物数量 +1
+- 触发范围 +4 格
+
+## 九、Boss Bar 进度条
+
 
 类似末影龙血条，在屏幕顶部显示当前据点的击杀进度。
 
 | 样式 | 说明 |
 |------|------|
-| **颜色** | 绿色 (`BossBarColor.GREEN`) |
+| **颜色** | 随类型变化：NORMAL绿 / BOSS红 / RESOURCE金 / PUZZLE紫 |
 | **样式** | 连续进度条 (`BossBarOverlay.PROGRESS`) |
 | **标题** | `⚔ §e{据点名} §r§7[§a已击杀§7/§c总数§7]` |
 | **可见范围** | 仅据点范围内的玩家可见 |
@@ -222,13 +261,13 @@ stateDiagram-v2
 
 ---
 
-## 八、命令系统
+## 十、命令系统
 
 所有命令使用 `Component.translatable()` 进行国际化。
 
 | 命令 | 权限 | 功能 |
 |------|------|------|
-| `/camp create <name>` | 所有玩家 | 在当前脚下位置创建据点 |
+| `/camp create <name> [type]` | 所有玩家 | 创建据点，可选 NORMAL/BOSS/RESOURCE/PUZZLE |
 | `/camp delete <name>` | OP | 删除据点 |
 | `/camp list` | 所有玩家 | 列出所有已激活和待生成的据点 |
 | `/camp addmob <name> <entity> <count>` | 所有玩家 | 向据点添加怪物 |
@@ -242,7 +281,7 @@ stateDiagram-v2
 
 ---
 
-## 九、替换原版刷怪机制
+## 十一、替换原版刷怪机制
 
 服务器启动时自动执行 `doMobSpawning = false`，每 5 秒强制检查一次防止被其他模组/命令重新开启。
 
@@ -255,7 +294,7 @@ stateDiagram-v2
 
 ---
 
-## 十、国际化（i18n）
+## 十二、国际化（i18n）
 
 位于 `src/main/resources/assets/shadecamp/lang/`：
 
@@ -268,7 +307,7 @@ stateDiagram-v2
 
 ---
 
-## 十一、数据持久化
+## 十三、数据持久化
 
 据点数据保存到世界存档目录：`<world>/data/shadecamp/camps.json`
 
@@ -284,7 +323,7 @@ stateDiagram-v2
 
 ---
 
-## 十二、文件清单
+## 十四、文件清单
 
 ```
 src/main/java/io/github/shade/
@@ -309,7 +348,7 @@ src/main/resources/data/shadecamp/
 
 ---
 
-## 十三、注意事项
+## 十五、注意事项
 
 1. **关闭原版刷怪**：`doMobSpawning = false` 是强制性的，每 5 秒检查一次
 2. **无限刷新保护**：`lastSpawnedTick` 初始值 -12000，两次 spawn 间隔 ≥12000 tick
