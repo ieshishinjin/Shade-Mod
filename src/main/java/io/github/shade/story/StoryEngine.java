@@ -178,9 +178,26 @@ public class StoryEngine {
      * 热加载指定脚本文件
      */
     public void reloadScript(String scriptId) {
-        // 从资源中重新加载
+        // 如果指定了脚本 ID，只重载该脚本
+        if (scriptId != null && !scriptId.isEmpty() && !"all".equals(scriptId)) {
+            StoryScript old = scripts.get(scriptId);
+            if (old == null) {
+                ShadeMod.LOGGER.warn("[story] 重载失败，脚本不存在: {}", scriptId);
+                return;
+            }
+            ResourceLocation loc = ResourceLocation.tryParse("shade:story/" + scriptId + ".json");
+            if (loc != null) {
+                StoryScript reloaded = loadScript(loc);
+                if (reloaded != null) {
+                    ShadeMod.LOGGER.debug("[story] 热加载完成: {}", scriptId);
+                    return;
+                }
+            }
+            // 降级：全量重载
+            ShadeMod.LOGGER.warn("[story] 指定脚本重载失败，降级为全量重载");
+        }
         loadScripts();
-        ShadeMod.LOGGER.debug("[story] 热加载完成: {}", scriptId);
+        ShadeMod.LOGGER.debug("[story] 全量热加载完成");
     }
 
     /**
@@ -590,8 +607,13 @@ public class StoryEngine {
                     break;
 
                 case EventData.TYPE_TRIGGER_CAMP:
-                    // 触发 Camp 据点战斗 — Phase 6 接入适配器后实现
+                    // 触发 Camp 据点战斗 — 通过适配器层执行
                     ShadeMod.LOGGER.debug("[story] 触发据点: {}", value);
+                    boolean triggered = io.github.shade.story.adapter.AdapterRegistry.executeAction(
+                            world, "TRIGGER_CAMP", value, params);
+                    if (!triggered) {
+                        ShadeMod.LOGGER.warn("[story] 触发据点失败: {} (未找到或状态不匹配)", value);
+                    }
                     break;
 
                 case EventData.TYPE_SHOW_CG:
