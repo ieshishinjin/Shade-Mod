@@ -41,6 +41,8 @@ import static net.minecraft.commands.Commands.argument;
  *   /story ai recommend                       — 查看免费/低成本 AI 推荐
  *   /story ai recommend <id>                  — 选择推荐服务商并填入配置
  *   /story ai recommend <id> open             — 打开官网注册地址（可点击）
+ *   /story ai safety                          — 查看当前安全配置
+ *   /story ai safety severity <safe|normal|permissive> — 设置安全级别
  */
 public class AiCommand {
 

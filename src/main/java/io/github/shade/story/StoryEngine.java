@@ -530,6 +530,11 @@ public class StoryEngine {
     /**
      * 执行事件节点
      */
+    /**
+     * 执行事件节点
+     * 安全规则：AI 生成的事件（ID 以 "ai_" 开头）只能执行安全类型，
+     * 不允许执行命令、给物品、传送等危险操作。
+     */
     private void executeEvent(ServerPlayer player, StoryNode node) {
         EventData event = node.getEvent();
         if (event == null) return;
@@ -540,10 +545,49 @@ public class StoryEngine {
 
         ShadeMod.LOGGER.debug("[story] 执行事件: type={}, value={}", type, value);
 
+        // 判断是否为 AI 生成的节点（ID 前缀 ai_）
+        boolean isAiGen = node.getId() != null && node.getId().startsWith("ai_");
+
         try {
+            // ===== AI 生成节点：仅允许安全事件 =====
+            if (isAiGen) {
+                switch (type) {
+                    case EventData.TYPE_SET_FLAG -> {
+                        if (value != null && params != null) {
+                            StoryManager manager = StoryManager.getInstance(world);
+                            StoryManager.PlayerProgress progress = manager.getProgress(player);
+                            if (progress != null) {
+                                progress.getFlags().put(value, params.getOrDefault("flagValue", true));
+                                manager.save(player);
+                            }
+                        }
+                    }
+                    case EventData.TYPE_PLAY_SOUND -> {
+                        if (value != null) {
+                            var sound = BuiltInRegistries.SOUND_EVENT.get(ResourceLocation.parse(value));
+                            if (sound != null) player.playNotifySound(sound, SoundSource.PLAYERS, 1.0f, 1.0f);
+                        }
+                    }
+                    case EventData.TYPE_SHOW_CG -> {
+                        if (value != null && !value.isEmpty()) {
+                            String cgTitle = params != null ? String.valueOf(params.getOrDefault("title", "")) : "";
+                            int fadeIn = params != null && params.containsKey("fadeIn") ? ((Number) params.get("fadeIn")).intValue() : 20;
+                            ServerPlayNetworking.send(player, new io.github.shade.story.network.StoryPayloads.CgDisplayPayload(value, cgTitle, fadeIn));
+                        }
+                    }
+                    case EventData.TYPE_BGM -> {
+                        ShadeMod.LOGGER.debug("[story] BGM 切换: {}", value);
+                    }
+                    default -> {
+                        ShadeMod.LOGGER.warn("[story] 拦截 AI 生成的危险事件类型: {} (AI 只允许 SET_FLAG/PLAY_SOUND/SHOW_CG/BGM)", type);
+                    }
+                }
+                return;
+            }
+
+            // ===== 手写脚本节点：所有事件类型均可执行 =====
             switch (type) {
                 case EventData.TYPE_COMMAND:
-                    // 执行命令
                     if (value != null && !value.isEmpty()) {
                         String command = value.startsWith("/") ? value.substring(1) : value;
                         world.getServer().getCommands().performPrefixedCommand(
@@ -552,7 +596,6 @@ public class StoryEngine {
                     break;
 
                 case EventData.TYPE_TELEPORT:
-                    // 传送玩家
                     if (params != null) {
                         int x = getParamInt(params, "x", 0);
                         int y = getParamInt(params, "y", 64);
@@ -562,7 +605,6 @@ public class StoryEngine {
                     break;
 
                 case EventData.TYPE_GIVE_ITEM:
-                    // 给予物品
                     if (value != null && params != null) {
                         int count = getParamInt(params, "count", 1);
                         ResourceLocation itemId = ResourceLocation.parse(value);
@@ -570,7 +612,6 @@ public class StoryEngine {
                         if (item != null) {
                             ItemStack stack = new ItemStack(item, count);
                             if (!player.getInventory().add(stack)) {
-                                // 背包满了，掉落在玩家位置
                                 world.addFreshEntity(new ItemEntity(
                                         world, player.getX(), player.getY(), player.getZ(), stack));
                             }
