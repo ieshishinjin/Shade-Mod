@@ -159,7 +159,23 @@ Galgame 风格对话框，带打字机效果和头像：
 
 ## 6. 画廊系统
 
-### 5.1 命令
+### 6.1 画廊 GUI（v0.0.6 新增）
+
+按剧情菜单中的 **「画廊」** 按钮打开图形浏览界面，或使用命令操作。
+
+**GUI 操作：**
+
+| 操作 | 说明 |
+|------|------|
+| **[C] CG / [E] 结局** | 切换分类标签 |
+| **鼠标滚轮** | 上下滚动条目 |
+| **ESC** | 关闭 |
+
+- 已解锁：✔ + 标题（绿色高亮）
+- 未解锁：? + 灰色
+- 全收集：右侧显示 `✦ 全收集!`
+
+### 6.2 命令
 
 ```
 /story gallery              — 画廊首页（收集进度）
@@ -169,18 +185,17 @@ Galgame 风格对话框，带打字机效果和头像：
 /story gallery view <id>    — 查看条目详情
 ```
 
-### 5.2 自动解锁
+### 6.3 自动解锁
 
 - 剧情脚本完成时自动解锁对应的画廊条目
-- 目前内置 4 个示例条目（2 CG + 2 结局）
+- 目前内置 4 个示例条目（2 CG + 2 结局）+ 第二章新增条目（2 CG + 2 结局）
 - 画廊条目在脚本 JSON 中配置
 
-### 5.3 多分支结局
+### 6.4 多分支结局
 
 根据玩家在剧情中的选择（Flag），解锁不同的结局条目：
 
 ```json
-// 画廊条目支持 condition 字段控制解锁条件
 {
     "condition": "accepted_first_quest=true"   // 仅当该 Flag 为 true 时解锁
 }
@@ -226,19 +241,19 @@ Galgame 风格对话框，带打字机效果和头像：
 
 ---
 
-## 8. 世界事件系统
+## 8. 世界事件系统（v0.0.6 实现）
 
-游戏世界中会随机触发事件，AI 自动生成引导剧情：
+游戏世界中会随机触发事件，AI 自动生成引导剧情。每位玩家独立冷却（v0.0.6 修复）：
 
-| 事件 | 说明 | AI 联动 |
-|------|------|---------|
-| **流星雨** 🌠 | 夜空划过流星，掉落特殊物品 | AI 生成"流星预示着什么"剧情 |
-| **怪物攻城** ⚔ | 大量怪物出现在玩家附近 | AI 生成"据点被攻击"引导剧情 |
-| **贸易车队** 🎪 | 神秘商队短暂出现 | AI 生成商队剧情 |
+| 事件 | 效果 | 间隔 |
+|------|------|------|
+| **流星雨** 🌠 | 火焰+烟雾粒子高空爆炸，共 4 波 | ~10 分钟/玩家 |
+| **怪物攻城** ⚔ | 玩家周围 15-30 格生成 4-7 只僵尸/骷髅/蜘蛛等，全灭后刷援军 | ~10 分钟/玩家 |
+| **贸易车队** 🎪 | 生成流浪商人 + 2 只交易羊驼，高兴村民粒子标记 | ~10 分钟/玩家 |
 
-- 事件间隔：至少 10 分钟
 - 触发时自动检测 AI 是否已配置
 - 如 AI 已启用，自动生成相关的引导剧情
+- 事件持续 300~600 tick，过期自动清理（v0.0.6 修复）
 
 ---
 
@@ -248,14 +263,42 @@ Galgame 风格对话框，带打字机效果和头像：
 
 ### 9.1 进度追踪
 
-- 击杀怪物：自动追踪 KILL_MOB / KILL_BOSS 进度
-- 清空营地：自动追踪 OCCUPY_CAMP 进度（需 Camp 系统）
+- 击杀怪物：自动追踪 KILL_MOB / KILL_BOSS 进度（通过原版统计数据）
+- 清空营地：自动追踪 OCCUPY_CAMP 进度（通过 Camp 适配器）
 - 到达位置：自动追踪 REACH_LOCATION 进度
-- 收集物品：自动追踪 COLLECT_ITEM 进度
-- 合成物品：自动追踪 CRAFT_ITEM 进度
-- 与村民交易：自动追踪 TRADE_VILLAGER 进度
+- 收集物品：自动追踪 COLLECT_ITEM 进度（通过 InventoryTracker）
+- 合成物品：自动追踪 CRAFT_ITEM 进度（通过 CraftingMixin + 物品适配器）
+- 与村民交易：自动追踪 TRADE_VILLAGER 进度（通过原版交易统计）
+- 收集进度适配器在 v0.0.6 新增，支持轮询模式
 
-### 9.2 Quest 奖励
+### 9.2 Quest 放弃（v0.0.6 新增）
+
+```
+/story quest list            — 查看当前活跃 Quest
+/story quest abort <questId> — 放弃指定 Quest（触发 onQuestFail 节点）
+```
+
+- 放弃后触发剧情脚本中定义的 `on_quest_fail` 节点跳转
+- 失败后的 Quest 从日志中移除
+
+### 9.3 Quest 超时（v0.0.6 新增）
+
+剧情脚本 JSON 中可为 Quest 配置超时时间（游戏 tick），超时自动失败：
+
+```json
+"quest": {
+    "quest_id": "timed_quest",
+    "quest_name": "限时任务",
+    "timeout_ticks": 24000,   // 游戏内 20 分钟后自动失败
+    ...
+    "on_quest_fail": "fail_node"
+}
+```
+
+- `timeout_ticks = 0` 表示永不超时（默认）
+- 超时后自动跳转到 `on_quest_fail` 节点
+
+### 9.4 Quest 奖励
 
 支持三种奖励方式：
 
@@ -270,7 +313,7 @@ Galgame 风格对话框，带打字机效果和头像：
 /story choose_reward <key>   -- 选择多选一奖励
 ```
 
-### 9.3 任务日志
+### 9.5 任务日志
 
 按 L 键打开任务日志界面（详见 §5）。
 
@@ -310,53 +353,95 @@ Galgame 风格对话框，带打字机效果和头像：
 /story trigger remove <名称>      -- 移除触发器
 ```
 
-## 11. AI 剧情生成
+## 11. NPC AI 对话（v0.0.6）
 
-按 U 打开 AI 控制面板进行配置。支持 DeepSeek、Ollama。
+潜行+右键点击村民或已命名的生物，触发 AI 即兴对话：
 
-## 12. 命令大全
+- 对话内容由当前配置的 AI 引擎实时生成
+- 10 秒冷却保护，防止频繁触发
+- 自动创建临时对话场景，对话结束后自动关闭
+- 需要先启用 AI（`/story ai enable`）
+- Shift+右键时不再同时触发系统触发器（v0.0.6 修复）
 
-### 12.1 剧情命令
+## 12. AI 剧情生成
 
-| 命令 | 说明 |
-|------|------|
-| /story start <脚本> | 开始指定剧情 |
-| /story status | 查看状态 |
-| /story advance | 推进对话 |
-| /story choose <索引> | 选择选项 |
-| /story complete | 强制完成 Quest |
-| /story flag set <k> <v> | 设置 Flag |
-| /story choose_reward <key> | 选择多选一奖励 |
-| /story reset | 重置进度 |
-| /story reload | 热加载脚本 |
+按 U 打开 AI 控制面板进行配置。支持 DeepSeek、Ollama、Claude、自定义 OpenAI 兼容 API。
 
-### 12.2 画廊命令
+## 13. 命令大全
 
-| 命令 | 说明 |
-|------|------|
-| /story gallery | 画廊首页 |
-| /story gallery list | 全部条目 |
-| /story gallery cg | CG 列表 |
-| /story gallery endings | 结局列表 |
-| /story gallery view <id> | 查看条目 |
+### 13.1 剧情命令
 
-### 12.3 AI 命令
+| 命令 | 说明 | 版本 |
+|------|------|------|
+| /story start <脚本> | 开始指定剧情 | v0.0.4 |
+| /story status | 查看状态 | v0.0.4 |
+| /story advance | 推进对话 | v0.0.4 |
+| /story choose <索引> | 选择选项 | v0.0.4 |
+| /story complete | 强制完成 Quest | v0.0.4 |
+| /story flag set <k> <v> | 设置 Flag | v0.0.4 |
+| /story choose_reward <key> | 选择多选一奖励 | v0.0.4 |
+| /story reset | 重置进度 | v0.0.4 |
+| /story reload | 热加载脚本 | v0.0.4 |
+| /story quest list | 查看活跃 Quest 列表 | **v0.0.6** |
+| /story quest abort <id> | 放弃指定 Quest | **v0.0.6** |
 
-| 命令 | 说明 |
-|------|------|
-| /story ai status | 查看配置 |
-| /story ai enable/disable | 启用/禁用 |
-| /story ai provider <引擎> | 设置引擎 |
-| /story ai key <key> | 设置密钥 |
-| /story ai model <模型> | 设置模型 |
-| /story ai generate [提示] | 生成剧情 |
-| /story ai autogen | 自动生成开关 |
-| /story ai recommend | 查看免费服务商 |
+### 13.2 画廊命令
+
+| 命令 | 说明 | 版本 |
+|------|------|------|
+| /story gallery | 画廊首页 | v0.0.5 |
+| /story gallery list | 全部条目 | v0.0.5 |
+| /story gallery cg | CG 列表 | v0.0.5 |
+| /story gallery endings | 结局列表 | v0.0.5 |
+| /story gallery view <id> | 查看条目 | v0.0.5 |
+
+### 13.3 AI 命令
+
+| 命令 | 说明 | 版本 |
+|------|------|------|
+| /story ai status | 查看配置 | v0.0.4 |
+| /story ai enable/disable | 启用/禁用 | v0.0.4 |
+| /story ai provider <引擎> | 设置引擎（deepseek/ollama/claude/custom） | **v0.0.6** 新增 claude/custom |
+| /story ai key <key> | 设置密钥 | v0.0.4 |
+| /story ai model <模型> | 设置模型 | v0.0.4 |
+| /story ai endpoint <url> | 设置 API 端点（自定义模式） | v0.0.4 |
+| /story ai generate [提示] | 生成剧情 | v0.0.4 |
+| /story ai autogen | 自动生成开关 | v0.0.4 |
+| /story ai recommend | 查看免费服务商 | v0.0.5 |
+| /story ai recommend <id> | 选择并自动填入配置 | **v0.0.6** 修复非 DeepSeek 服务商 |
 
 ---
 
 ## 文件结构
 
-Shade Mod v0.0.5
+Shade Mod v0.0.6
 
-服务端 55+ 文件 | 客户端 7 文件 | 资源 8+ 文件
+**服务端 ~60 文件 | 客户端 ~10 文件 | 资源 ~12 文件**
+
+### v0.0.6 新增/修改文件
+
+| 文件 | 类型 | 说明 |
+|------|------|------|
+| `aigen/ClaudeProvider.java` | 新增 | Claude (Anthropic) API 提供者 |
+| `aigen/OpenAiCompatibleProvider.java` | 新增 | 通用 OpenAI 兼容 API 提供者 |
+| `aigen/StoryAiGenerator.java` | 修改 | 修复自定义 Provider 支持 |
+| `aigen/AiConfig.java` | 修改 | 新增 claude/custom 字段，Gson 缓存 |
+| `aigen/AiCommand.java` | 修改 | 支持 claude/custom 提供者 |
+| `aigen/ResponseParser.java` | 不变 | 安全的 JSON 解析 |
+| `story/StoryEngine.java` | 修改 | AI 节点安全保护（禁止命令/物品/传送） |
+| `story/StoryEventHandler.java` | 修改 | NPC 对话触发器顺序修复，tick 优化 |
+| `story/StoryCommand.java` | 修改 | 新增 `/story quest list/abort` |
+| `story/StoryManager.java` | 修改 | 脏标记 + 异步刷新 |
+| `story/QuestManager.java` | 修改 | 新增 failQuest + 超时检测 |
+| `story/RuntimeQuest.java` | 修改 | 新增 startTime/timeoutTicks |
+| `story/WorldEventManager.java` | 修改 | 事件效果实现 + 每玩家冷却 |
+| `story/InventoryTracker.java` | 修改 | 批量通知 + 性能优化 |
+| `story/adapter/InventoryAdapter.java` | 新增 | COLLECT_ITEM/CRAFT_ITEM 适配器 |
+| `story/adapter/CombatAdapter.java` | 新增 | KILL_MOB/KILL_BOSS 适配器 |
+| `story/adapter/VillagerAdapter.java` | 新增 | TRADE_VILLAGER 适配器 |
+| `client/story/GalleryBrowserScreen.java` | 新增 | 画廊图形浏览界面 |
+| `client/aigen/AiControlScreen.java` | 修改 | EditBox 输入 + 动态进度 |
+| `client/aigen/AiSettingsScreen.java` | 修改 | 新增 Claude 选项卡 |
+| `client/ShadeModClient.java` | 修改 | 画廊/进度网络包接收 |
+| `resources/story/chapter2_forest_whispers.json` | 新增 | 第二章剧情剧本 |
+| `camp/CampManager.java` | 修改 | 性能优化（反向映射、脏标记、异步保存） |

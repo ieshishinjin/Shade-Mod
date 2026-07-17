@@ -157,10 +157,12 @@
 │ ✦ AI 剧情生成                    │
 │ ───────────                      │
 │ ● 剧情进度                       │
-│    ○ 第一章：苏醒  (进行中)       │
+│    ▶ 第一章：苏醒  (进行中)       │ ← 实时从服务器获取
+│    收集进度: 50%                 │
 │ ───────────                      │
 │ ● AI 引擎                        │
-│ [DeepSeek] [Ollama] [启用] [禁用]│
+│ [DeepSeek] [Ollama] [Claude]     │
+│ [启用] [禁用]                    │
 │ [智谱AI(免费)] [讯飞星火(免费)]   │
 │ [Groq]           [更多]          │
 │ ───────────                      │
@@ -170,8 +172,8 @@
 │ ───────────                      │
 │ ● 生成剧情                       │
 │ ┌────────────────────────┐       │
-│ │ 输入剧情描述...          │       │
-│ └────────────────────────┘       │
+│ │ 输入剧情描述...          │       │ ← EditBox 控件
+│ └────────────────────────┘       │    支持粘贴/光标
 │       [▶ 生成剧情]               │
 │ ───────────                      │
 │ [测试连接] [状态] [设置] [关闭]   │
@@ -185,6 +187,7 @@
 |------|------|
 | **DeepSeek** | 切换到 DeepSeek AI 引擎 |
 | **Ollama** | 切换到 Ollama 本地引擎 |
+| **Claude** | 切换到 Claude (Anthropic) AI 引擎（v0.0.6 新增） |
 | **启用** | 开启 AI 生成功能 |
 | **禁用** | 关闭 AI 生成功能 |
 | **智谱AI(免费)** | 一键填入智谱 AI 配置 |
@@ -201,10 +204,18 @@
 
 ### 文本输入
 
-- 直接键盘输入剧情描述
+- 使用 Minecraft `EditBox` 控件（v0.0.6 改进）
+- 支持 **光标移动**、**文本粘贴**、**鼠标点击定位**
 - **Enter** 快速生成
 - **ESC** 关闭
 - 最多 300 个字符
+
+### 剧情进度（v0.0.6 新增）
+
+AI 控制面板的"剧情进度"区域现在从服务器实时获取数据：
+- 显示当前剧章名称和状态（▶ 进行中 / ✔ 已完成 / ○ 未开始）
+- 显示整体收集进度百分比
+- 按 U 键打开面板时自动请求最新数据
 
 ---
 
@@ -217,7 +228,8 @@
 │  AI 设置                     关闭│
 │ ───────────                      │
 │ ● 选择模型                       │
-│ [DeepSeek] [Ollama] [自定义]     │
+│ [DeepSeek] [Ollama] [Claude]     │
+│           [自定义]               │
 │                                  │
 │ ● API 密钥                       │
 │ ┌────────────────────────┐[保存] │
@@ -232,20 +244,22 @@
 
 ### 模型说明
 
-| 模型 | 说明 |
-|------|------|
-| **DeepSeek** | 推荐，需 API Key |
-| **Ollama** | 本地运行，免费，无需密钥 |
-| **自定义** | 任意 OpenAI 兼容 API |
+| 模型 | 说明 | 新增版本 |
+|------|------|----------|
+| **DeepSeek** | 推荐，需 API Key | v0.0.4 |
+| **Ollama** | 本地运行，免费，无需密钥 | v0.0.4 |
+| **Claude** | Anthropic Claude API，需 API Key | **v0.0.6** |
+| **自定义** | 任意 OpenAI 兼容 API | v0.0.4 (v0.0.6 修复) |
 
-### 自定义模式
+### 自定义模式（v0.0.6 修复）
 
-选中 **「自定义」** 后展开额外字段：
+选中 **「自定义」** 后展开额外字段。v0.0.6 修复了此前自定义 Provider 无法使用的 Bug：
 
 ```
 ┌──────────────────────────────────┐
 │ ● 选择模型                       │
-│ [DeepSeek] [Ollama] [自定义]     │
+│ [DeepSeek] [Ollama] [Claude]     │
+│           [自定义]               │
 │                                  │
 │ ● API 端点                       │
 │ ┌────────────────────────────┐   │
@@ -266,6 +280,10 @@
 │       [← 返回主菜单]             │
 └──────────────────────────────────┘
 ```
+
+### 推荐服务商（v0.0.6 修复）
+
+`/story ai recommend <id>` 选择非 DeepSeek 服务商（智谱、讯飞星火、Groq、HuggingFace）时，配置会正确写入自定义 Provider 字段，不再错误地存入 DeepSeek 配置。
 
 ### 操作
 
@@ -300,13 +318,31 @@
 ## 文件结构
 
 ```
+src/main/java/io/github/shade/story/aigen/
+├── AiConfig.java                 # AI 配置持久化（含 DeepSeek/Ollama/Claude/自定义）
+├── AiProvider.java               # AI 提供者接口
+├── DeepSeekProvider.java         # DeepSeek / OpenAI 兼容 API
+├── OllamaProvider.java           # Ollama 本地模型
+├── ClaudeProvider.java           # Claude (Anthropic) API （v0.0.6 新增）
+├── OpenAiCompatibleProvider.java # 通用 OpenAI 兼容 Provider （v0.0.6 新增）
+├── FreeAiProviders.java          # 免费 AI 服务商推荐列表
+├── AiCommand.java                # /story ai 命令
+├── StoryAiGenerator.java         # AI 生成协调器
+├── PromptBuilder.java            # AI Prompt 构建
+├── ResponseParser.java           # AI 响应解析和校验
+├── AutoStoryGenerator.java       # 自动剧情生成
+├── GenerationQueue.java          # AI 生成队列
+├── PlayerStoryProfile.java       # 玩家行为画像
+└── StoryContextManager.java      # 剧情连续性管理
+
 src/client/java/io/github/shade/client/
 ├── aigen/
-│   ├── AiControlScreen.java      # AI 控制面板
-│   ├── AiSettingsScreen.java     # AI 设置页面
+│   ├── AiControlScreen.java      # AI 控制面板（含 EditBox + 动态进度）
+│   ├── AiSettingsScreen.java     # AI 设置页面（含 Claude 选项卡）
 │   └── ThemeButton.java          # 自定义按钮组件
 └── story/
     ├── StoryMenuScreen.java      # 剧情菜单
     ├── StoryDialogScreen.java    # 剧情对话框
-    └── StoryQuestOverlay.java    # Quest 追踪 HUD
+    ├── StoryQuestOverlay.java    # Quest 追踪 HUD
+    └── GalleryBrowserScreen.java # 画廊浏览界面（v0.0.6 新增）
 ```

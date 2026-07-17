@@ -224,43 +224,50 @@ AI 生成剧情时，能够"看到"当前游戏世界的完整状态：
 - 实现区域进入触发剧情
 - 实现物品获得触发剧情
 
-### Phase 6：适配器层
-- 设计适配器标准接口
-- 实现 Camp 系统适配器（与现有 Camp 功能对接）
-- 实现原版采集/合成适配器
-- 实现原版战斗/击杀适配器
-- 实现适配器注册表
+### Phase 6：适配器层 
+- 设计适配器标准接口（`SystemAdapter`）
+- 实现 Camp 系统适配器（`CampAdapter` — OCCUPY_CAMP / ATTACK_CAMP / DEFEND_CAMP / UPGRADE_CAMP）
+- 实现物品收集/合成适配器（`InventoryAdapter` — COLLECT_ITEM / CRAFT_ITEM，通过 InventoryTracker 快照查询）
+- 实现战斗适配器（`CombatAdapter` — KILL_MOB / KILL_BOSS，通过 Minecraft 原版统计数据查询）
+- 实现村民交易适配器（`VillagerAdapter` — TRADE_VILLAGER，通过 Statistics.TRADED_WITH_VILLAGER 查询）
+- 实现适配器注册表（`AdapterRegistry`）
 
-### Phase 7：AI 生成器
-- 设计 AI 生成器接口
-- 实现 API 对接
+### Phase 7：AI 生成器 
+- 设计 AI 生成器接口（`AiProvider`）
+- 实现 DeepSeek API 对接
 - 实现 Ollama 本地对接
+- 实现通用 OpenAI 兼容 Provider（`OpenAiCompatibleProvider`，v0.0.6）
+- 实现 Claude Anthropic API 对接（`ClaudeProvider`，v0.0.6）
 - 构建完整的游戏状态摘要（供 AI 感知）
-- 实现 AI 返回内容的解析和校验
-- 实现 AI 生成内容的插入和回滚机制
+- 实现 AI 返回内容的解析和校验（`ResponseParser`，含类型白名单和长度限制）
+- 实现 AI 生成内容的插入和回滚机制（`StoryAiGenerator.injectNodes`）
 
-### Phase 8：多分支结局
+### Phase 8：多分支结局 
 - 根据玩家 Flag 条件解锁不同结局
 - 画廊条目支持 condition 字段控制解锁条件
 - END 节点自动检测 Flag 并解锁对应画廊条目
 
-### Phase 9：CG 展示系统
+### Phase 9：CG 展示系统 
 - 全屏 CG 插画展示，支持淡入淡出
 - SHOW_CG 事件类型
 - CgDisplayPayload 网络包传输 CG 数据
 
-### Phase 10：世界事件系统
+### Phase 10：世界事件系统 
 - 随机世界事件触发（流星雨、怪物攻城、贸易车队）
+- **流星雨**：火焰 + 烟雾粒子效果，高空爆炸效果
+- **怪物攻城**：玩家周围 15-30 格生成 4-7 只真实敌对怪物，全灭后刷援军
+- **贸易车队**：生成流浪商人和 2 只交易羊驼 + 高兴村民粒子标记
 - 事件与 AI 联动，自动生成引导剧情
-- 事件冷却和间隔控制
+- 每位玩家独立冷却（v0.0.6 修复：原来一个玩家的冷却会阻止全场）
+- 事件过期自动清理（v0.0.6 修复：原来事件只增不减）
 
-### Phase 11：NPC AI 对话
-- 潜行+右键触发 NPC AI 对话
-- 村民和命名生物支持
-- 冷却保护防止频繁触发
-- 设计 AI 生成器接口
-- 实现 API 对接
-- 实现 Ollama 本地对接
-- 构建完整的游戏状态摘要（供 AI 感知）
-- 实现 AI 返回内容的解析和校验
-- 实现 AI 生成内容的插入和回滚机制
+### Phase 11：NPC AI 对话 
+- 潜行+右键触发村民或命名生物的 AI 即兴对话
+- 10 秒冷却保护防止频繁触发
+- 自动创建临时对话脚本、异步 AI 生成、节点注入并展示
+- AI 禁用时不会触发（v0.0.6 修复：潜行+右键不再同时触发触发器检测）
+
+### 新增 Phase 12：安全防护（v0.0.6）
+- AI 生成的剧情节点（ID 以 `ai_` 开头）只能执行 SET_FLAG / PLAY_SOUND / SHOW_CG / BGM 四类安全事件
+- 阻止 AI 通过剧情 EVENT 节点执行服务器命令、给予物品、传送玩家
+- 手写脚本节点不受限制，保留完整功能
