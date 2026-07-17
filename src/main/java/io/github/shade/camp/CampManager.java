@@ -46,11 +46,14 @@ public class CampManager {
     /** 待创建的候选据点（自动生成用，存 BlockPos） */
     private final List<BlockPos> pendingCamps = new ArrayList<>();
 
+    /** 实体 UUID → Camp 反向映射（O(1) isCampMob 查询） */
+    private final Map<java.util.UUID, Camp> mobToCampMap = new ConcurrentHashMap<>();
+
+    /** 脏标记：数据有变更时才序列化到磁盘 */
+    private boolean dirty = false;
+
     public boolean isCampMob(java.util.UUID uuid) {
-        for (Camp camp : camps.values()) {
-            if (camp.getActiveMobIds().contains(uuid)) return true;
-        }
-        return false;
+        return mobToCampMap.containsKey(uuid);
     }
     /** 是否已完成本种子的自动生成 */
     private boolean seedGenerated = false;
@@ -117,24 +120,46 @@ public class CampManager {
     }
 
     /**
-     * 保存据点数据到磁盘
+     * 异步保存据点数据到磁盘
      */
     public void save() {
-        try {
-            Files.createDirectories(saveFile.getParent());
-            try (Writer writer = Files.newBufferedWriter(saveFile)) {
-                CampDataWrapper wrapper = new CampDataWrapper();
-                wrapper.camps = new ArrayList<>(camps.values());
-                // 保存已生成的种子标记
-                if (seedGenerated && !wrapper.generatedSeeds.contains(
-                        CampWorldGenerator.GENERATION_FLAG_PREFIX + world.getSeed())) {
-                    wrapper.generatedSeeds.add(
-                            CampWorldGenerator.GENERATION_FLAG_PREFIX + world.getSeed());
+        // 创建快照（在服务器线程同步完成）
+        boolean hasNewSeed = seedGenerated && !(
+            new java.util.HashSet<>(loadExistingSeeds()).contains(
+                CampWorldGenerator.GENERATION_FLAG_PREFIX + world.getSeed()));
+        List<Camp> campsSnapshot = new ArrayList<>(camps.values());
+        long seed = world.getSeed();
+        boolean seedGen = seedGenerated;
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                Files.createDirectories(saveFile.getParent());
+                try (Writer writer = Files.newBufferedWriter(saveFile)) {
+                    CampDataWrapper wrapper = new CampDataWrapper();
+                    wrapper.camps = campsSnapshot;
+                    if (seedGen && hasNewSeed) {
+                        wrapper.generatedSeeds.add(
+                                CampWorldGenerator.GENERATION_FLAG_PREFIX + seed);
+                    }
+                    GSON.toJson(wrapper, writer);
                 }
-                GSON.toJson(wrapper, writer);
+            } catch (IOException e) {
+                ShadeMod.LOGGER.error("保存据点数据失败", e);
             }
-        } catch (IOException e) {
-            ShadeMod.LOGGER.error("保存据点数据失败", e);
+        });
+    }
+
+    /** 读取已有的种子标记（供 save 时去重） */
+    private java.util.List<String> loadExistingSeeds() {
+        try {
+            if (!Files.exists(saveFile)) return java.util.Collections.emptyList();
+            try (Reader reader = Files.newBufferedReader(saveFile)) {
+                CampDataWrapper existing = GSON.fromJson(reader, CampDataWrapper.class);
+                return existing != null && existing.generatedSeeds != null
+                        ? existing.generatedSeeds : java.util.Collections.emptyList();
+            }
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
         }
     }
 
@@ -160,7 +185,7 @@ public class CampManager {
         camp.setMobConfig(CampRandomizer.generateRandomMobConfig(random, mobPool));
 
         camps.put(name, camp);
-        save();
+        dirty = true;
         return camp;
     }
 
@@ -371,10 +396,9 @@ public class CampManager {
         // 1. 处理待创建的候选据点（区块加载后自动完成）
         if (tickCounter % 10 == 0) { processPendingCamps(); }
 
-        // 2. 更新已激活据点的状态
+        // 2. 更新已激活据点的状态（直接遍历 values，不复制——LinkedHashMap 迭代安全）
         long gameTime = world.getGameTime();
-        List<Camp> processed = new ArrayList<>(camps.values());
-        for (Camp camp : processed) {
+        for (Camp camp : camps.values()) {
             switch (camp.getStatus()) {
                 case IDLE -> tickIdle(camp, gameTime);
                 case FIGHTING -> tickFighting(camp, gameTime);
@@ -382,9 +406,10 @@ public class CampManager {
             }
         }
 
-        // 每 5 秒自动保存一次（100 ticks）
-        if (tickCounter % 200 == 0) {
+        // 每 5 秒自动保存一次（仅数据有变更时）
+        if (tickCounter % 200 == 0 && dirty) {
             save();
+            dirty = false;
         }
     }
 

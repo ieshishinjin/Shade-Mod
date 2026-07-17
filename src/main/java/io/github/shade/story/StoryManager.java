@@ -31,6 +31,8 @@ public class StoryManager {
     private final ServerLevel world;
     private final Path saveDir;
     private final Map<UUID, PlayerProgress> progressCache = new ConcurrentHashMap<>();
+    /** 脏标记：有数据变更才写盘 */
+    private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
 
     private StoryManager(ServerLevel world) {
         this.world = world;
@@ -75,22 +77,40 @@ public class StoryManager {
     }
 
     /**
-     * 保存指定玩家进度到磁盘
+     * 标记玩家进度为脏（延迟写入）
+     * 实际写盘由 saveAll/saveDirty 或服务器停止时触发
      */
     public void save(ServerPlayer player) {
-        PlayerProgress progress = progressCache.get(player.getUUID());
-        if (progress != null) {
-            saveToDisk(player.getUUID(), progress);
+        if (progressCache.containsKey(player.getUUID())) {
+            dirtyPlayers.add(player.getUUID());
         }
     }
 
     /**
-     * 保存所有缓存的进度到磁盘
+     * 立即写入所有脏数据（异步）
+     */
+    public void flushDirty() {
+        if (dirtyPlayers.isEmpty()) return;
+        Set<UUID> toSave = Set.copyOf(dirtyPlayers);
+        dirtyPlayers.clear();
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            for (UUID uuid : toSave) {
+                PlayerProgress progress = progressCache.get(uuid);
+                if (progress != null) saveToDiskSync(uuid, progress);
+            }
+        });
+    }
+
+    /**
+     * 写入所有脏数据 + 剩余缓存（服务器关闭时调用）
      */
     public void saveAll() {
         for (Map.Entry<UUID, PlayerProgress> entry : progressCache.entrySet()) {
-            saveToDisk(entry.getKey(), entry.getValue());
+            UUID uuid = entry.getKey();
+            // 同步写，确保服务器关闭前落盘
+            saveToDiskSync(uuid, entry.getValue());
         }
+        dirtyPlayers.clear();
     }
 
     /**
@@ -166,7 +186,7 @@ public class StoryManager {
         }
     }
 
-    private void saveToDisk(UUID uuid, PlayerProgress progress) {
+    private void saveToDiskSync(UUID uuid, PlayerProgress progress) {
         try {
             Files.createDirectories(saveDir);
             try (Writer writer = Files.newBufferedWriter(getPlayerFile(uuid))) {

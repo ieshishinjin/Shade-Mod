@@ -69,6 +69,13 @@ public class AiConfig {
     /** 是否在故事中遇到 AI_GENERATE 节点时自动触发 */
     private boolean autoGenerate = false;
 
+    /** 缓存 Gson 实例（避免每次 save 创建新对象） */
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    /** 脏标记 + 最后保存时间（用于合并频繁写入） */
+    private transient volatile boolean dirty = false;
+    private static final long DEBOUNCE_MS = 500;
+
     private AiConfig() {}
 
     // ==================== 单例 ====================
@@ -84,7 +91,7 @@ public class AiConfig {
     }
 
     public static void cleanup() {
-        if (INSTANCE != null) INSTANCE.save();
+        if (INSTANCE != null) INSTANCE.saveSync();
         INSTANCE = null;
     }
 
@@ -98,7 +105,7 @@ public class AiConfig {
             return config;
         }
         try (Reader reader = Files.newBufferedReader(configPath)) {
-            AiConfig config = new Gson().fromJson(reader, AiConfig.class);
+            AiConfig config = GSON.fromJson(reader, AiConfig.class);
             if (config == null) config = new AiConfig();
             return config;
         } catch (IOException e) {
@@ -109,17 +116,37 @@ public class AiConfig {
 
     public void save() {
         if (configPath == null) return;
-        // 异步写文件，不阻塞服务端主线程
+        dirty = true;
+        // 延迟合并写入：500ms 内的多次 save() 只触发一次磁盘写入
         CompletableFuture.runAsync(() -> {
             try {
-                Files.createDirectories(configPath.getParent());
-                try (Writer writer = Files.newBufferedWriter(configPath)) {
-                    new GsonBuilder().setPrettyPrinting().create().toJson(this, writer);
+                Thread.sleep(DEBOUNCE_MS);
+                if (!dirty) return; // 已被后续写入覆盖
+                dirty = false;
+                synchronized (configPath) {
+                    Files.createDirectories(configPath.getParent());
+                    try (Writer writer = Files.newBufferedWriter(configPath)) {
+                        GSON.toJson(this, writer);
+                    }
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 ShadeMod.LOGGER.error("[ai] 保存配置失败", e);
             }
         });
+    }
+
+    /** 同步保存（服务器关闭时调用，确保数据落盘） */
+    public void saveSync() {
+        if (configPath == null) return;
+        dirty = false;
+        try {
+            Files.createDirectories(configPath.getParent());
+            try (Writer writer = Files.newBufferedWriter(configPath)) {
+                GSON.toJson(this, writer);
+            }
+        } catch (IOException e) {
+            ShadeMod.LOGGER.error("[ai] 保存配置失败", e);
+        }
     }
 
     // ==================== Getters & Setters ====================

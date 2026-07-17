@@ -101,7 +101,10 @@ public class WorldEventManager {
                 case "SIEGE" -> {
                     // 怪物攻城：通过 event.siegeMobIds 追踪怪物存活情况
                     if (elapsed > 0 && elapsed % 400 == 0 && event.spawnedEntities > 0) {
-                        event.siegeMobIds.removeIf(uuid -> level.getEntity(uuid) == null || !level.getEntity(uuid).isAlive());
+                        event.siegeMobIds.removeIf(uuid -> {
+                            var entity = level.getEntity(uuid);
+                            return entity == null || !entity.isAlive();
+                        });
                         if (event.siegeMobIds.isEmpty()) {
                             var targetPlayer = (net.minecraft.server.level.ServerPlayer) level.getPlayerByUUID(entry.getKey());
                             if (targetPlayer != null) {

@@ -126,13 +126,14 @@ public class StoryEventHandler {
     }
 
     private static void onServerTick(MinecraftServer server) {
+        int ticks = server.getTickCount(); // 只计算一次
         for (ServerLevel level : server.getAllLevels()) {
             if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
             QuestManager.getInstance(level).tick();
             TriggerManager.getInstance(level).tick();
 
             // 每 10 tick（0.5 秒）检查玩家物品变化 → COLLECT_ITEM 进度
-            if (server.getTickCount() % 10 == 0) {
+            if (ticks % 10 == 0) {
                 InventoryTracker inventoryTracker = InventoryTracker.getInstance();
                 for (ServerPlayer player : level.players()) {
                     if (!player.isSpectator()) {
@@ -142,7 +143,7 @@ public class StoryEventHandler {
             }
 
             // 每 20 tick（1 秒）检查玩家位置 → REACH_LOCATION 进度
-            if (server.getTickCount() % 20 == 0) {
+            if (ticks % 20 == 0) {
                 ZoneTracker zoneTracker = ZoneTracker.getInstance();
                 for (ServerPlayer player : level.players()) {
                     if (!player.isSpectator()) {
@@ -152,10 +153,15 @@ public class StoryEventHandler {
             }
 
             // 自动剧情生成检测（每 100 tick = 5秒）
-            AutoStoryGenerator.getInstance().tick(level, server.getTickCount());
+            AutoStoryGenerator.getInstance().tick(level, ticks);
 
             // 世界事件检测（每 200 tick = 10秒）
-            WorldEventManager.getInstance().tick(level, server.getTickCount());
+            WorldEventManager.getInstance().tick(level, ticks);
+
+            // 每 200 tick 异步刷新脏故事进度到磁盘
+            if (ticks % 200 == 0) {
+                StoryManager.getInstance(level).flushDirty();
+            }
         }
     }
 

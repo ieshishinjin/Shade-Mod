@@ -114,7 +114,7 @@ public class QuestManager {
         }
 
         // 检查是否已有活跃的同 ID Quest
-        List<RuntimeQuest> playerQuests = activeQuests.computeIfAbsent(player.getUUID(), k -> new ArrayList<>());
+        List<RuntimeQuest> playerQuests = activeQuests.computeIfAbsent(player.getUUID(), k -> new java.util.concurrent.CopyOnWriteArrayList<>());
         for (RuntimeQuest q : playerQuests) {
             if (q.getQuestId().equals(data.getQuestId())) {
                 return q; // 已在活跃中

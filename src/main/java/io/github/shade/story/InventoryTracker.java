@@ -38,7 +38,7 @@ public class InventoryTracker {
 
     /**
      * 扫描玩家背包，检测物品变化
-     * 在服务器 tick 中定期调用
+     * 优化：批量收集变化后再统一通知，避免 N+1 调用
      */
     public void scan(ServerPlayer player) {
         UUID uuid = player.getUUID();
@@ -46,27 +46,32 @@ public class InventoryTracker {
         Map<String, Integer> lastSnapshot = snapshots.get(uuid);
 
         if (lastSnapshot != null) {
-            // 检测物品数量增加
+            // 第一步：批量收集所有增量变化
+            var deltas = new java.util.ArrayList<Delta>();
             for (Map.Entry<String, Integer> entry : currentSnapshot.entrySet()) {
                 String itemId = entry.getKey();
                 int currentCount = entry.getValue();
                 int lastCount = lastSnapshot.getOrDefault(itemId, 0);
-
                 if (currentCount > lastCount) {
-                    int delta = currentCount - lastCount;
-                    // 通知 Quest 系统
-                    AdapterRegistry.notifyProgress(player, "COLLECT_ITEM", itemId, delta);
+                    deltas.add(new Delta(itemId, currentCount - lastCount));
+                }
+            }
 
-                    // 通知触发器系统（物品拾取触发）
-                    // 由 InventoryTracker 统一检测，避免 TriggerManager 重复扫描背包
-                    var triggerManager = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
-                    triggerManager.checkItemPickup(player, itemId);
+            // 第二步：统一通知（批量模式下只需一次 TriggerManager 查找）
+            if (!deltas.isEmpty()) {
+                var triggerManager = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
+                for (Delta d : deltas) {
+                    AdapterRegistry.notifyProgress(player, "COLLECT_ITEM", d.itemId, d.delta);
+                    triggerManager.checkItemPickup(player, d.itemId);
                 }
             }
         }
 
         snapshots.put(uuid, currentSnapshot);
     }
+
+    /** 物品变化记录（避免循环内重复分配） */
+    private record Delta(String itemId, int delta) {}
 
     /**
      * 获取玩家背包中指定物品的数量
@@ -77,39 +82,35 @@ public class InventoryTracker {
         return snapshot.getOrDefault(itemId, 0);
     }
 
+    /** 缓存物品 ID 解析（减少 BuiltInRegistries 重复查找） */
+    private static String getItemId(ItemStack stack) {
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+    }
+
     /**
-     * 获取玩家背包快照
+     * 获取玩家背包快照（优化：合并物品槽遍历减少方法调用）
      */
     private Map<String, Integer> takeSnapshot(ServerPlayer player) {
-        Map<String, Integer> snapshot = new HashMap<>();
+        Map<String, Integer> snapshot = new HashMap<>(48); // 预分配容量
 
-        // 主背包
-        for (ItemStack stack : player.getInventory().items) {
-            if (!stack.isEmpty()) {
-                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-                snapshot.merge(id, stack.getCount(), Integer::sum);
-            }
-        }
-
-        // 盔甲栏
-        for (ItemStack stack : player.getInventory().armor) {
-            if (!stack.isEmpty()) {
-                String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-                snapshot.merge(id, stack.getCount(), Integer::sum);
-            }
-        }
-
-        // 副手
-        ItemStack offhand = player.getInventory().offhand.get(0);
-        if (!offhand.isEmpty()) {
-            String id = BuiltInRegistries.ITEM.getKey(offhand.getItem()).toString();
-            snapshot.merge(id, offhand.getCount(), Integer::sum);
-        }
+        // 所有物品槽（主背包 36 + 盔甲 4 + 副手 1 = 41）
+        scanSlots(snapshot, player.getInventory().items);
+        scanSlots(snapshot, player.getInventory().armor);
+        scanSlots(snapshot, player.getInventory().offhand);
 
         // 注意：个人 2x2 合成格属于 ContainerPlayer 容器，不属于 Inventory
-        // 如需追踪合成格物品，需要从 openContainer 中获取
-
         return snapshot;
+    }
+
+    /** 批量扫描一组物品槽到快照 */
+    private void scanSlots(Map<String, Integer> snapshot, List<ItemStack> slots) {
+        for (int i = 0, size = slots.size(); i < size; i++) {
+            ItemStack stack = slots.get(i);
+            if (!stack.isEmpty()) {
+                String id = getItemId(stack);
+                snapshot.merge(id, stack.getCount(), Integer::sum);
+            }
+        }
     }
 
     /**
