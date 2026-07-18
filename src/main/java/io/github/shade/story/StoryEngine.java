@@ -72,41 +72,38 @@ public class StoryEngine {
     /**
      * 加载所有剧情脚本
      *
-     * 从 classpath assets/shade/story/*.json 加载（最可靠方式），
+     * 从 ResourceManager 扫描加载（覆盖 assets 和 data 两个来源），
+     * 数据包路径：data/<namespace>/story/*.json
+     * 资源包路径：assets/<namespace>/story/*.json
      * 热加载时调用此方法即可重新加载。
      */
     public void loadScripts() {
         scripts.clear();
         int loaded = 0;
 
-        // 从 classpath 扫描加载
-        try {
-            var classLoader = getClass().getClassLoader();
-            // 已知脚本列表（如新增脚本，在此添加）
-            String[] knownScripts = {"chapter1_wake_up", "chapter2_forest_whispers"};
+        // 从 ResourceManager 扫描加载（支持数据包 + 资源包）
+        var resourceManager = world.getServer().getResourceManager();
+        var resources = resourceManager.listResources("story",
+                loc -> loc.getPath().endsWith(".json"));
 
-            // 尝试自动发现更多脚本
-            var enumUrls = classLoader.getResources("assets/shade/story/");
-            while (enumUrls.hasMoreElements()) {
-                java.net.URL url = enumUrls.nextElement();
-                if ("file".equals(url.getProtocol())) {
-                    // 开发环境：扫描目录
-                    try {
-                        java.io.File dir = new java.io.File(url.toURI());
-                        java.io.File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
-                        if (files != null) {
-                            for (java.io.File f : files) {
-                                try (var reader = new java.io.FileReader(f, java.nio.charset.StandardCharsets.UTF_8)) {
-                                    if (loadFromReader(f.getName(), reader)) loaded++;
-                                }
-                            }
-                        }
-                    } catch (Exception ignored) {}
-                }
+        // 按路径排序保证确定性加载顺序
+        var sortedLocations = new java.util.ArrayList<>(resources.keySet());
+        java.util.Collections.sort(sortedLocations);
+
+        for (var location : sortedLocations) {
+            try (var input = resourceManager.open(location);
+                 var reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
+                if (loadFromReader(location.getPath(), reader)) loaded++;
+            } catch (IOException e) {
+                ShadeMod.LOGGER.warn("[story] 无法加载脚本: {}", location, e);
             }
+        }
 
-            // 如果自动发现失败，尝试已知脚本名
-            if (loaded == 0) {
+        // 回退：ResourceManager 未找到脚本时尝试 classpath（开发环境兼容）
+        if (loaded == 0) {
+            String[] knownScripts = {"chapter1_wake_up", "chapter2_forest_whispers"};
+            try {
+                var classLoader = getClass().getClassLoader();
                 for (String scriptName : knownScripts) {
                     String resourcePath = "assets/shade/story/" + scriptName + ".json";
                     try (var input = classLoader.getResourceAsStream(resourcePath)) {
@@ -121,12 +118,12 @@ public class StoryEngine {
                         ShadeMod.LOGGER.error("[story] 加载失败: {}", resourcePath, e);
                     }
                 }
+            } catch (Exception e) {
+                ShadeMod.LOGGER.error("[story] classpath 扫描失败", e);
             }
-        } catch (Exception e) {
-            ShadeMod.LOGGER.error("[story] classpath 扫描失败", e);
         }
 
-        ShadeMod.LOGGER.debug("[story] 已加载 {} 个剧情脚本", loaded);
+        ShadeMod.LOGGER.info("[story] 已加载 {} 个剧情脚本", loaded);
     }
 
     /**
@@ -330,6 +327,9 @@ public class StoryEngine {
                 // 自动解锁画廊结局（带 Flag 条件判断）
                 var progress = manager.getProgress(player);
                 GalleryManager.getInstance(world).unlockByScript(player, state.currentScript, progress.getFlags());
+                // 自动解锁日记条目
+                io.github.shade.story.journal.JournalManager.getInstance(world)
+                        .unlockByScript(player, state.currentScript, progress.getFlags());
                 ShadeMod.LOGGER.info("[story] 玩家 {} 完成剧情: {}",
                         player.getName().getString(), state.currentScript);
 
