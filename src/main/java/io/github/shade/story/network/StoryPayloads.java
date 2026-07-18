@@ -240,6 +240,122 @@ public class StoryPayloads {
         @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
+    // === 日记数据包 (S2C) ===
+
+    public record JournalPayload(
+            List<JournalEntryData> entries,
+            List<String> unlockedIds
+    ) implements CustomPacketPayload {
+        public record JournalEntryData(String id, String title, String description, String type) {}
+        public static final CustomPacketPayload.Type<JournalPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:journal"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, JournalPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeCollection(p.entries, (b, e) -> {
+                        b.writeUtf(e.id(), 64); b.writeUtf(e.title(), 128);
+                        b.writeUtf(e.description(), 256); b.writeUtf(e.type(), 16);
+                    });
+                    buf.writeCollection(p.unlockedIds, (b, id) -> b.writeUtf(id, 64));
+                },
+                buf -> new JournalPayload(
+                        buf.readList(b -> new JournalEntryData(b.readUtf(64), b.readUtf(128), b.readUtf(256), b.readUtf(16))),
+                        buf.readList(b -> b.readUtf(64))));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求日记数据 (C2S) ===
+
+    public record JournalRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<JournalRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:journal_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, JournalRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new JournalRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 图鉴数据包 (S2C) ===
+
+    public record BestiaryPayload(
+            List<BestiaryEntryData> entries,
+            List<String> discoveredIds
+    ) implements CustomPacketPayload {
+        public record BestiaryEntryData(String id, String title, String description, String type, String category) {}
+        public static final CustomPacketPayload.Type<BestiaryPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:bestiary"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BestiaryPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeCollection(p.entries, (b, e) -> {
+                        b.writeUtf(e.id(), 64); b.writeUtf(e.title(), 128);
+                        b.writeUtf(e.description(), 256); b.writeUtf(e.type(), 16);
+                        b.writeUtf(e.category() != null ? e.category() : "", 32);
+                    });
+                    buf.writeCollection(p.discoveredIds, (b, id) -> b.writeUtf(id, 64));
+                },
+                buf -> new BestiaryPayload(
+                        buf.readList(b -> new BestiaryEntryData(b.readUtf(64), b.readUtf(128), b.readUtf(256), b.readUtf(16), b.readUtf(32))),
+                        buf.readList(b -> b.readUtf(64))));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求图鉴数据 (C2S) ===
+
+    public record BestiaryRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<BestiaryRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:bestiary_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, BestiaryRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new BestiaryRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 触发器列表数据包 (S2C) ===
+
+    public record TriggerListPayload(
+            List<TriggerEntryData> triggers,
+            boolean isOperator
+    ) implements CustomPacketPayload {
+        public record TriggerEntryData(String id, String type, String scriptId, String targetId,
+                                        int x1, int z1, int x2, int z2, boolean oneTime) {}
+        public static final CustomPacketPayload.Type<TriggerListPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:trigger_list"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, TriggerListPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {
+                    buf.writeCollection(p.triggers, (b, e) -> {
+                        b.writeUtf(e.id(), 64); b.writeUtf(e.type(), 32);
+                        b.writeUtf(e.scriptId(), 64); b.writeUtf(e.targetId() != null ? e.targetId() : "", 64);
+                        b.writeInt(e.x1()); b.writeInt(e.z1()); b.writeInt(e.x2()); b.writeInt(e.z2());
+                        b.writeBoolean(e.oneTime());
+                    });
+                    buf.writeBoolean(p.isOperator);
+                },
+                buf -> new TriggerListPayload(
+                        buf.readList(b -> new TriggerEntryData(
+                                b.readUtf(64), b.readUtf(32), b.readUtf(64), b.readUtf(64),
+                                b.readInt(), b.readInt(), b.readInt(), b.readInt(), b.readBoolean())),
+                        buf.readBoolean()));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 请求触发器列表 (C2S) ===
+
+    public record TriggerListRequestPayload() implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<TriggerListRequestPayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:trigger_list_req"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, TriggerListRequestPayload> CODEC = StreamCodec.of(
+                (buf, p) -> {}, buf -> new TriggerListRequestPayload());
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    // === 删除触发器 (C2S) ===
+
+    public record TriggerRemovePayload(String triggerId) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<TriggerRemovePayload> TYPE =
+                new CustomPacketPayload.Type<>(ResourceLocation.parse("shade:trigger_remove"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, TriggerRemovePayload> CODEC = StreamCodec.of(
+                (buf, p) -> buf.writeUtf(p.triggerId, 64),
+                buf -> new TriggerRemovePayload(buf.readUtf(64)));
+        @Override public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
     // === 注册与处理 ===
 
     public static void register() {
@@ -255,6 +371,13 @@ public class StoryPayloads {
         PayloadTypeRegistry.playC2S().register(CgClosePayload.TYPE, CgClosePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(GalleryRequestPayload.TYPE, GalleryRequestPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(StoryProgressRequestPayload.TYPE, StoryProgressRequestPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(JournalPayload.TYPE, JournalPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(JournalRequestPayload.TYPE, JournalRequestPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BestiaryPayload.TYPE, BestiaryPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BestiaryRequestPayload.TYPE, BestiaryRequestPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(TriggerListPayload.TYPE, TriggerListPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(TriggerListRequestPayload.TYPE, TriggerListRequestPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(TriggerRemovePayload.TYPE, TriggerRemovePayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(StoryActionPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> handlePlayerAction(ctx.player(), p)));
         ServerPlayNetworking.registerGlobalReceiver(QuestLogRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendQuestLogToClient(ctx.player())));
         ServerPlayNetworking.registerGlobalReceiver(GalleryRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendGalleryToClient(ctx.player())));
@@ -267,6 +390,15 @@ public class StoryPayloads {
                 if (nextNode != null) sendNodeToClient(player, engine, nextNode);
                 else ServerPlayNetworking.send(player, StoryDialogPayload.close());
             }
+        }));
+        ServerPlayNetworking.registerGlobalReceiver(JournalRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendJournalToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(BestiaryRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendBestiaryToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(TriggerListRequestPayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> sendTriggerListToClient(ctx.player())));
+        ServerPlayNetworking.registerGlobalReceiver(TriggerRemovePayload.TYPE, (p, ctx) -> ctx.player().server.execute(() -> {
+            var player = ctx.player();
+            var tm = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
+            tm.removeTrigger(p.triggerId());
+            sendTriggerListToClient(player);
         }));
         ShadeMod.LOGGER.debug("[story] 网络包已注册");
     }
@@ -328,6 +460,50 @@ public class StoryPayloads {
         if (hasActive) { var s = engine.getScript(activeId); if (s != null) activeTitle = s.getTitle(); }
         boolean thisCompleted = activeId != null && progress.getCompletedScripts().contains(activeId);
         ServerPlayNetworking.send(player, new StoryProgressPayload(hasActive, activeTitle, activeId != null ? activeId : "", thisCompleted, total, completed));
+    }
+
+    /**
+     * 发送日记数据到客户端
+     */
+    public static void sendJournalToClient(ServerPlayer player) {
+        var jm = io.github.shade.story.journal.JournalManager.getInstance(player.serverLevel());
+        var data = jm.getDisplayData(player);
+        List<JournalPayload.JournalEntryData> entries = new ArrayList<>();
+        for (var entry : jm.getAllEntries()) {
+            entries.add(new JournalPayload.JournalEntryData(
+                    entry.getId(), entry.getTitle(), entry.getDescription(), entry.getType()));
+        }
+        ServerPlayNetworking.send(player, new JournalPayload(entries, new ArrayList<>(data.unlockedIds())));
+    }
+
+    /**
+     * 发送图鉴数据到客户端
+     */
+    public static void sendBestiaryToClient(ServerPlayer player) {
+        var bm = io.github.shade.story.journal.BestiaryManager.getInstance(player.serverLevel());
+        var data = bm.getDisplayData(player);
+        List<BestiaryPayload.BestiaryEntryData> entries = new ArrayList<>();
+        for (var entry : bm.getAllEntries()) {
+            entries.add(new BestiaryPayload.BestiaryEntryData(
+                    entry.getId(), entry.getTitle(), entry.getDescription(), entry.getType(), entry.getCategory()));
+        }
+        ServerPlayNetworking.send(player, new BestiaryPayload(entries, new ArrayList<>(data.discoveredIds())));
+    }
+
+    /**
+     * 发送触发器列表到客户端
+     */
+    public static void sendTriggerListToClient(ServerPlayer player) {
+        var tm = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
+        var triggers = tm.getAllTriggers();
+        List<TriggerListPayload.TriggerEntryData> entries = new ArrayList<>();
+        for (var t : triggers) {
+            entries.add(new TriggerListPayload.TriggerEntryData(
+                    t.getId(), t.getType(), t.getScriptId(), t.getTargetId(),
+                    t.getX1(), t.getZ1(), t.getX2(), t.getZ2(), t.isOneTime()));
+        }
+        boolean isOp = player.hasPermissions(player.server.getOperatorUserPermissionLevel());
+        ServerPlayNetworking.send(player, new TriggerListPayload(entries, isOp));
     }
 
     private static void handlePlayerAction(ServerPlayer player, StoryActionPayload payload) {
