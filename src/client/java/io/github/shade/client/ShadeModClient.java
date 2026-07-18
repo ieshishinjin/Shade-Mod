@@ -3,10 +3,12 @@ package io.github.shade.client;
 import io.github.shade.client.aigen.AiControlScreen;
 import io.github.shade.client.story.CgScreen;
 import io.github.shade.client.story.GalleryBrowserScreen;
+import io.github.shade.client.story.JournalScreen;
 import io.github.shade.client.story.QuestLogScreen;
 import io.github.shade.client.story.StoryDialogScreen;
 import io.github.shade.client.story.StoryMenuScreen;
 import io.github.shade.client.story.StoryQuestOverlay;
+import io.github.shade.client.story.TriggerManageScreen;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -18,8 +20,9 @@ import org.lwjgl.glfw.GLFW;
 
 public class ShadeModClient implements ClientModInitializer {
 
-    private static KeyMapping storyMenuKey, aiControlKey, questLogKey;
+    private static KeyMapping storyMenuKey, aiControlKey, questLogKey, journalKey;
     private static final QuestLogScreen questLogScreen = new QuestLogScreen();
+    private static JournalScreen journalScreen;
 
     /** 缓存的故事进度（供 AiControlScreen 读取） */
     public static StoryPayloads.StoryProgressPayload cachedProgress = null;
@@ -46,6 +49,10 @@ public class ShadeModClient implements ClientModInitializer {
         questLogKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.shade.quest_log", GLFW.GLFW_KEY_L, "category.shade"));
 
+        // J 键 → 打开日记/图鉴
+        journalKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.shade.journal", GLFW.GLFW_KEY_J, "category.shade"));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (storyMenuKey.consumeClick()) {
                 ClientPlayNetworking.send(StoryPayloads.StoryActionPayload.openMenu());
@@ -57,6 +64,12 @@ public class ShadeModClient implements ClientModInitializer {
             if (questLogKey.consumeClick()) {
                 client.setScreen(questLogScreen);
                 ClientPlayNetworking.send(new StoryPayloads.QuestLogRequestPayload());
+            }
+            if (journalKey.consumeClick()) {
+                journalScreen = new JournalScreen();
+                client.setScreen(journalScreen);
+                ClientPlayNetworking.send(new StoryPayloads.JournalRequestPayload());
+                ClientPlayNetworking.send(new StoryPayloads.BestiaryRequestPayload());
             }
         });
     }
@@ -109,11 +122,45 @@ public class ShadeModClient implements ClientModInitializer {
                     });
                 });
 
+        // 日记数据 → 更新日记/图鉴屏幕
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.JournalPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        if (journalScreen != null) {
+                            journalScreen.updateJournal(payload);
+                        }
+                    });
+                });
+
+        // 图鉴数据 → 更新日记/图鉴屏幕
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.BestiaryPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        if (journalScreen != null) {
+                            journalScreen.updateBestiary(payload);
+                        }
+                    });
+                });
+
         // 画廊数据 → 打开画廊浏览器
         ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.GalleryPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
                         context.client().setScreen(new GalleryBrowserScreen(payload.entries(), payload.unlockedIds()));
+                    });
+                });
+
+        // 触发器列表 → 打开触发器管理界面
+        ClientPlayNetworking.registerGlobalReceiver(StoryPayloads.TriggerListPayload.TYPE,
+                (payload, context) -> {
+                    context.client().execute(() -> {
+                        if (context.client().screen instanceof TriggerManageScreen tms) {
+                            tms.updateTriggers(payload);
+                        } else {
+                            var screen = new TriggerManageScreen();
+                            screen.updateTriggers(payload);
+                            context.client().setScreen(screen);
+                        }
                     });
                 });
 
