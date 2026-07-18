@@ -21,9 +21,9 @@
 
 | 层级 | 职责 | 依赖方向 |
 |------|------|----------|
-| 表现层 | 对话框 UI、Quest 追踪 HUD、CG 展示 | 依赖中层 |
-| 逻辑层 | 剧情引擎、Quest 系统、分支控制、条件判断 | 依赖底层接口，不依赖具体系统 |
-| 系统层 | Camp、采集、建造、战斗等具体游戏功能 | 向上提供适配接口 |
+| 表现层 | 对话框 UI、Quest 追踪 HUD、CG 展示、日记/图鉴、画廊 | 依赖中层 |
+| 逻辑层 | 剧情引擎、Quest 系统、分支控制、条件判断、触发器 | 依赖底层接口，不依赖具体系统 |
+| 系统层 | Camp、采集、建造、战斗、日记、图鉴等具体游戏功能 | 向上提供适配接口 |
 
 ---
 
@@ -58,12 +58,12 @@ Quest 系统不关心"具体要做什么"，只关心：
 | 营地 | ATTACK_CAMP | 对营地造成防御伤害 | Camp系统 |
 | 营地 | DEFEND_CAMP | 保护营地不被攻破 | Camp系统 |
 | 营地 | UPGRADE_CAMP | 提升营地等级 | Camp系统 |
-| 资源 | COLLECT_ITEM | 获取指定数量物品 | 原版/模组 (已实现) |
-| 资源 | CRAFT_ITEM | 合成指定数量物品 | 原版合成 (已实现) |
+| 资源 | COLLECT_ITEM | 获取指定数量物品 | 原版/模组 |
+| 资源 | CRAFT_ITEM | 合成指定数量物品 | 原版合成 |
 | 战斗 | KILL_MOB | 击杀指定数量实体 | 原版战斗 |
 | 战斗 | KILL_BOSS | 击败特定Boss | Boss系统 |
-| 探索 | REACH_LOCATION | 到达指定坐标区域 | 原版探索 (已实现) |
-| 社交 | TRADE_VILLAGER | 完成指定次数交易 | 原版交易 (已实现) |
+| 探索 | REACH_LOCATION | 到达指定坐标区域 | 原版探索 |
+| 社交 | TRADE_VILLAGER | 完成指定次数交易 | 原版交易 |
 | 建造 | BUILD_STRUCTURE | 建造指定建筑 | 建造系统 |
 | 经验 | REACH_LEVEL | 达到指定经验等级 | 原版经验 |
 | 自定义 | CUSTOM | 任意扩展目标 | 任何系统 |
@@ -138,7 +138,7 @@ Quest 系统不关心"具体要做什么"，只关心：
 
 ---
 
-## 五、AI 剧情生成器（预留）
+## 五、AI 剧情生成器
 
 ### 5.1 AI 的感知能力
 
@@ -147,6 +147,7 @@ AI 生成剧情时，能够"看到"当前游戏世界的完整状态：
 - 玩家的位置、等级、生命值
 - 当前正在进行的 Quest
 - 已完成的历史剧情
+- 已解锁的日记和图鉴条目
 
 ### 5.2 AI 的约束
 
@@ -188,6 +189,8 @@ AI 生成剧情时，能够"看到"当前游戏世界的完整状态：
 | 条件系统 | 检查各种条件决定分支 | ⚠️ 依赖适配器 |
 | 适配器注册表 | 管理所有已注册的游戏系统适配器 | ❌ |
 | AI 生成器 | 收集状态、构建 Prompt、解析 AI 返回 | ⚠️ 依赖适配器 |
+| 日记系统 | 记录剧情关键信息、NPC、地点 | ❌ |
+| 图鉴系统 | 记录生物、物品、方块发现 | ❌ |
 | 具体系统适配器 | 对接 Camp、采集、战斗等具体系统 | ✅ |
 
 ---
@@ -197,77 +200,83 @@ AI 生成剧情时，能够"看到"当前游戏世界的完整状态：
 ### Phase 1：基础框架
 - 设计剧情脚本格式规范（节点类型、字段定义）
 - 实现剧情引擎核心（加载、解析、节点跳转）
-- 实现玩家进度存储（与现有 NBT 系统合并）
-- 实现剧情脚本热加载（开发时方便调试）
+- 实现玩家进度存储
+- 实现剧情脚本热加载
 
 ### Phase 2：UI 系统
 - 实现对话框（立绘、说话人、文字、打字机效果）
 - 实现选项按钮（点击后分支跳转）
-- 实现 Quest 追踪 HUD（屏幕右侧或角落显示当前 Quest 进度）
+- 实现 Quest 追踪 HUD
 - 实现对话框的打开/关闭/跳过动画
 
 ### Phase 3：Quest 系统
 - 实现 Quest 数据结构（包含多个 Objective）
 - 实现 Quest 进度追踪（每个 Objective 独立进度）
-- 实现 Quest 完成判断（所有 Objective 完成 → Quest 完成）
-- 实现 Quest Reward 发放（经验、物品、Flag）
-- 实现 Quest 日志（玩家可查看当前和已完成 Quest）
+- 实现 Quest 完成判断
+- 实现 Quest Reward 发放
+- 实现 Quest 日志
 
 ### Phase 4：条件与事件
 - 实现条件系统（支持多种条件类型）
-- 绑定游戏事件到 Quest 进度更新（采集、击杀、交易等）
-- 实现剧情触发事件（传送、给予物品、切换 BGM、召唤怪物等）
+- 绑定游戏事件到 Quest 进度更新
+- 实现剧情触发事件
 
 ### Phase 5：命令与交互
-- 实现 /story 命令系列（开始、状态、重置、列表）
+- 实现 /story 命令系列
 - 实现 NPC 右键触发剧情
 - 实现区域进入触发剧情
 - 实现物品获得触发剧情
 
-### Phase 6：适配器层 
+### Phase 6：适配器层
 - 设计适配器标准接口（`SystemAdapter`）
-- 实现 Camp 系统适配器（`CampAdapter` — OCCUPY_CAMP / ATTACK_CAMP / DEFEND_CAMP / UPGRADE_CAMP）
-- 实现物品收集/合成适配器（`InventoryAdapter` — COLLECT_ITEM / CRAFT_ITEM，通过 InventoryTracker 快照查询）
-- 实现战斗适配器（`CombatAdapter` — KILL_MOB / KILL_BOSS，通过 Minecraft 原版统计数据查询）
-- 实现村民交易适配器（`VillagerAdapter` — TRADE_VILLAGER，通过 Statistics.TRADED_WITH_VILLAGER 查询）
-- 实现适配器注册表（`AdapterRegistry`）
+- 实现 6 种适配器（Camp、Inventory、Combat、Villager、System、Passive）
+- 实现适配器注册表
 
-### Phase 7：AI 生成器 
+### Phase 7：AI 生成器
 - 设计 AI 生成器接口（`AiProvider`）
-- 实现 DeepSeek API 对接
-- 实现 Ollama 本地对接
-- 实现通用 OpenAI 兼容 Provider（`OpenAiCompatibleProvider`，v0.0.6）
-- 实现 Claude Anthropic API 对接（`ClaudeProvider`，v0.0.6）
-- 构建完整的游戏状态摘要（供 AI 感知）
-- 实现 AI 返回内容的解析和校验（`ResponseParser`，含类型白名单和长度限制）
-- 实现 AI 生成内容的插入和回滚机制（`StoryAiGenerator.injectNodes`）
+- 实现 DeepSeek / Ollama / Claude / OpenAI 兼容 Provider
+- 构建完整的游戏状态摘要
+- 实现 AI 返回内容的解析和校验
 
-### Phase 8：多分支结局 
+### Phase 8：多分支结局
 - 根据玩家 Flag 条件解锁不同结局
-- 画廊条目支持 condition 字段控制解锁条件
-- END 节点自动检测 Flag 并解锁对应画廊条目
+- 画廊条目支持 condition 字段
 
-### Phase 9：CG 展示系统 
+### Phase 9：CG 展示系统
 - 全屏 CG 插画展示，支持淡入淡出
-- SHOW_CG 事件类型
-- CgDisplayPayload 网络包传输 CG 数据
 
-### Phase 10：世界事件系统 
+### Phase 10：世界事件系统
 - 随机世界事件触发（流星雨、怪物攻城、贸易车队）
-- **流星雨**：火焰 + 烟雾粒子效果，高空爆炸效果
-- **怪物攻城**：玩家周围 15-30 格生成 4-7 只真实敌对怪物，全灭后刷援军
-- **贸易车队**：生成流浪商人和 2 只交易羊驼 + 高兴村民粒子标记
-- 事件与 AI 联动，自动生成引导剧情
-- 每位玩家独立冷却（v0.0.6 修复：原来一个玩家的冷却会阻止全场）
-- 事件过期自动清理（v0.0.6 修复：原来事件只增不减）
+- 每位玩家独立冷却
 
-### Phase 11：NPC AI 对话 
+### Phase 11：NPC AI 对话
 - 潜行+右键触发村民或命名生物的 AI 即兴对话
-- 10 秒冷却保护防止频繁触发
-- 自动创建临时对话脚本、异步 AI 生成、节点注入并展示
-- AI 禁用时不会触发（v0.0.6 修复：潜行+右键不再同时触发触发器检测）
 
-### 新增 Phase 12：安全防护（v0.0.6）
-- AI 生成的剧情节点（ID 以 `ai_` 开头）只能执行 SET_FLAG / PLAY_SOUND / SHOW_CG / BGM 四类安全事件
-- 阻止 AI 通过剧情 EVENT 节点执行服务器命令、给予物品、传送玩家
-- 手写脚本节点不受限制，保留完整功能
+### Phase 12：安全防护
+- AI 生成的剧情节点安全白名单
+
+### Phase 13：日记/图鉴系统（v0.0.7）
+- 实现日记和图鉴数据模型（JournalEntry / BestiaryEntry）
+- 实现日记管理器和图鉴管理器（单例 + JSON 持久化）
+- 实现网络数据包（S2C 推送 + C2S 请求）
+- 实现双标签页 GUI（按 J 打开）
+- 实现自动解锁事件钩子（击杀解锁图鉴、完成剧情解锁日记）
+- 剧情菜单添加日记按钮
+
+### Phase 14：数据包加载脚本（v0.0.7）
+- `StoryEngine.loadScripts()` 改用 `ResourceManager.listResources()`
+- 支持从数据包 `data/<命名空间>/story/*.json` 加载剧情脚本
+- 兼容现有模组资源 `assets/shade/story/*.json`
+- 数据包脚本优先级高于模组内置脚本
+
+### Phase 15：多世界支持（v0.0.7）
+- 移除 `StoryEventHandler` 和 `CampEventHandler` 中的 `OVERWORLD` 维度过滤
+- 剧情系统、Quest 追踪、世界事件、触发器在所有维度中均可工作
+- 据点系统：仅在主世界自动生成新据点，已有据点在任意维度可管理
+
+### Phase 16：触发器管理 GUI（v0.0.7）
+- 实现触发器管理图形界面（TriggerManageScreen）
+- 左栏列表 + 右栏详情，支持删除操作
+- 新增三个网络数据包（列表请求/列表响应/删除请求）
+- 剧情菜单底部添加「⚙ 触发器管理」按钮
+- 仅 OP 玩家可删除触发器
