@@ -60,9 +60,12 @@ public class InventoryTracker {
             // 第二步：统一通知（批量模式下只需一次 TriggerManager 查找）
             if (!deltas.isEmpty()) {
                 var triggerManager = io.github.shade.story.trigger.TriggerManager.getInstance(player.serverLevel());
+                var bestiaryManager = io.github.shade.story.journal.BestiaryManager.getInstance(player.serverLevel());
                 for (Delta d : deltas) {
                     AdapterRegistry.notifyProgress(player, "COLLECT_ITEM", d.itemId, d.delta);
                     triggerManager.checkItemPickup(player, d.itemId);
+                    // 自动解锁图鉴物品条目（首次收集）
+                    bestiaryManager.discoverByItemCollect(player, d.itemId);
                 }
             }
         }
