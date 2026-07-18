@@ -13,6 +13,7 @@
   "key.shade.story_menu": "Story Menu",
   "key.shade.ai_control": "AI Control Panel",
   "key.shade.quest_log": "Quest Log",
+  "key.shade.journal": "Journal/Bestiary",
   "key.shade.resume": "Open Story Dialog",
   "category.shade": "Shade Mod",
   "shade.guide.welcome": "\n§6✦ §lWelcome to Shade Mod!",
@@ -22,6 +23,7 @@
   "shade.guide.key.ai": "  §eU §7- AI control panel",
   "shade.guide.key.quest": "  §eL §7- Open quest log",
   "shade.guide.key.npc": "  §eShift+Right-click §7- Talk to NPC",
+  "shade.guide.key.journal": "  §eJ §7- Open journal/bestiary",
   "shade.guide.cmd.camp": "  §e/camp list §7- View nearby camps",
   "shade.guide.cmd.story": "  §e/story list §7- View all scripts",
   "shade.guide.cmd.ai": "  §e/story ai recommend §7- Configure free AI"

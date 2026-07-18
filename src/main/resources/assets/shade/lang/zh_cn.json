@@ -15,6 +15,7 @@
   "category.shade": "Shade 模组",
   "shade.quest.reward.choose": "\n§6✦ 选择一个奖励:",
   "key.shade.quest_log": "任务日志",
+  "key.shade.journal": "日记/图鉴",
   "shade.guide.welcome": "\n§6✦ §l欢迎使用 Shade Mod!",
   "shade.guide.line1": "  §7集成了 Galgame 剧情、AI 生成和据点战斗的模组",
   "shade.guide.line2": "  §7以下是一些快速入门指南：\n",
@@ -22,6 +23,7 @@
   "shade.guide.key.ai": "  §eU §7- AI 剧情控制面板",
   "shade.guide.key.quest": "  §eL §7- 打开任务日志",
   "shade.guide.key.npc": "  §eShift+右键 §7- 与 NPC 对话",
+  "shade.guide.key.journal": "  §eJ §7- 打开日记/图鉴",
   "shade.guide.cmd.camp": "  §e/camp list §7- 查看附近据点",
   "shade.guide.cmd.story": "  §e/story list §7- 查看所有剧本",
   "shade.guide.cmd.ai": "  §e/story ai recommend §7- 配置免费 AI"
