@@ -17,10 +17,10 @@ public class StoryMenuScreen extends Screen {
     private final String activeId;
     private final boolean hasActive;
     private int selectedIndex = -1;
-    private Button actionButton, galleryButton, closeButton;
+    private Button actionButton, galleryButton, journalButton, triggerButton, closeButton;
 
     private static final int TOP = 50;
-    private static final int BOTTOM_MARGIN = 50;
+    private static final int BOTTOM_MARGIN = 80;
     private static final int LEFT_W = 200;
     private static final int GAP = 12;
 
@@ -57,17 +57,32 @@ public class StoryMenuScreen extends Screen {
                     onClose();
                     ClientPlayNetworking.send(new StoryPayloads.GalleryRequestPayload());
                 })
-                .bounds(lx, bottomY, 95, 20).build();
+                .bounds(lx, bottomY, 60, 20).build();
         addRenderableWidget(galleryButton);
 
+        journalButton = Button.builder(Component.literal("§a日记"), btn -> {
+                    onClose();
+                    ClientPlayNetworking.send(new StoryPayloads.JournalRequestPayload());
+                    ClientPlayNetworking.send(new StoryPayloads.BestiaryRequestPayload());
+                })
+                .bounds(lx + 65, bottomY, 60, 20).build();
+        addRenderableWidget(journalButton);
+
         closeButton = Button.builder(Component.literal("§7关闭"), btn -> onClose())
-                .bounds(lx + 100, bottomY, 95, 20).build();
+                .bounds(lx + 130, bottomY, 65, 20).build();
         addRenderableWidget(closeButton);
 
         actionButton = Button.builder(Component.literal(""), btn -> doAction())
                 .bounds(rx, bottomY, LEFT_W, 22).build();
         actionButton.visible = false;
         addRenderableWidget(actionButton);
+
+        triggerButton = Button.builder(Component.literal("§c⚙ 触发器管理"), btn -> {
+                    onClose();
+                    ClientPlayNetworking.send(new StoryPayloads.TriggerListRequestPayload());
+                })
+                .bounds(rx, bottomY + 26, 100, 18).build();
+        addRenderableWidget(triggerButton);
     }
 
     private void updateActionButton() {
@@ -150,6 +165,7 @@ public class StoryMenuScreen extends Screen {
         if (k == 264) { selectedIndex = selectedIndex >= scripts.size() - 1 ? 0 : selectedIndex + 1; updateActionButton(); return true; }
         if (k == 257 || k == 335) { doAction(); return true; }
         if (k == 71) { runCmd("story gallery"); return true; }
+        if (k == 74) { onClose(); ClientPlayNetworking.send(new StoryPayloads.JournalRequestPayload()); ClientPlayNetworking.send(new StoryPayloads.BestiaryRequestPayload()); return true; }
         if (k == 256) { onClose(); return true; }
         return super.keyPressed(k, s, m);
     }
