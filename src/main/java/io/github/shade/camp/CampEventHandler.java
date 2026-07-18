@@ -31,7 +31,12 @@ public class CampEventHandler {
 
         for (ServerLevel level : server.getAllLevels()) {
             try {
-                if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
+                // 仅在主世界关闭原版自然刷怪和生成据点
+                boolean isOverworld = level.dimension() == net.minecraft.world.level.Level.OVERWORLD;
+                if (!isOverworld) {
+                    CampManager.getInstance(level); // 初始化管理器（加载已有数据），不生成新据点
+                    continue;
+                }
 
                 // 关闭原版自然刷怪
                 level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING).set(false, server);
@@ -89,12 +94,12 @@ public class CampEventHandler {
     private static void onServerTick(MinecraftServer server) {
         try {
             for (ServerLevel level : server.getAllLevels()) {
-                if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
-
-                // 每 5 秒强制确保原版刷怪关闭
-                if (level.getGameTime() % 100 == 0) {
-                    var rule = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING);
-                    if (rule.get()) rule.set(false, server);
+                // 仅在主世界强制关闭原版刷怪
+                if (level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+                    if (level.getGameTime() % 100 == 0) {
+                        var rule = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING);
+                        if (rule.get()) rule.set(false, server);
+                    }
                 }
 
                 // 每秒更新 TAB 头部显示世界等级

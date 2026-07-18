@@ -96,6 +96,12 @@ public class StoryEventHandler {
                     AdapterRegistry.notifyProgress(serverPlayer, "TRADE_VILLAGER",
                             entityId, 1);
                 }
+
+                // 日记 NPC 自动解锁（首次交互）
+                if (entity instanceof net.minecraft.world.entity.npc.Villager) {
+                    io.github.shade.story.journal.JournalManager.getInstance(serverPlayer.serverLevel())
+                            .unlockNpc(serverPlayer, "akaya");
+                }
             }
             return InteractionResult.PASS;
         });
@@ -117,8 +123,6 @@ public class StoryEventHandler {
         ShadeMod.LOGGER.debug("[story] ===== 初始化故事系统 =====");
 
         for (ServerLevel level : server.getAllLevels()) {
-            if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
-
             StoryEngine.getInstance(level).loadScripts();
             QuestManager.getInstance(level);
             TriggerManager.getInstance(level);
@@ -128,7 +132,6 @@ public class StoryEventHandler {
     private static void onServerTick(MinecraftServer server) {
         int ticks = server.getTickCount(); // 只计算一次
         for (ServerLevel level : server.getAllLevels()) {
-            if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) continue;
             QuestManager.getInstance(level).tick();
             TriggerManager.getInstance(level).tick();
 
@@ -172,6 +175,8 @@ public class StoryEventHandler {
         QuestManager.cleanupAll();
         TriggerManager.cleanupAll();
         GalleryManager.cleanupAll();
+        io.github.shade.story.journal.JournalManager.cleanupAll();
+        io.github.shade.story.journal.BestiaryManager.cleanupAll();
         AiConfig.cleanup();
         GenerationQueue.cleanup();
         AutoStoryGenerator.cleanup();
@@ -292,6 +297,8 @@ public class StoryEventHandler {
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "  §eL §7- 打开任务日志"));
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "  §eJ §7- 打开日记/图鉴"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "  §eShift+右键 §7- 与 NPC 对话"));
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "  §e/camp list §7- 查看附近据点"));
@@ -313,6 +320,10 @@ public class StoryEventHandler {
                 || entity instanceof net.minecraft.world.entity.boss.wither.WitherBoss) {
             AdapterRegistry.notifyProgress(player, "KILL_BOSS", entityId, 1);
         }
+
+        // 自动解锁图鉴条目（首次击杀）
+        io.github.shade.story.journal.BestiaryManager.getInstance(player.serverLevel())
+                .discoverByMobKill(player, entityId);
 
         // 记录玩家行为（AI 联动）
         io.github.shade.story.aigen.PlayerStoryProfile.get(player.getUUID())
