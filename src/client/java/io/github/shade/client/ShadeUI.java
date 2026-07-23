@@ -17,6 +17,8 @@ public class ShadeUI {
     public static final int BG_CARD      = 0xCC252645;
     /** 选中高亮背景 */
     public static final int BG_SELECTED  = 0x44252545;
+    /** 详情面板背景（半透明深色） */
+    public static final int BG_DETAIL    = 0x33181A2E;
     /** 锁定/未解锁背景 */
     public static final int BG_LOCKED    = 0xFF3A3C6A;
     /** 按钮默认底色 */
