@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,10 +13,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 日记/图鉴界面 — 双标签页：日记（剧情记录）和图鉴（生物/物品/方块发现）
+ * 日记/图鉴界面 — 双标签页。
  *
- * 按 J 键或在剧情菜单中点击按钮打开。
- * 左栏滚动列表，右栏详情面板。
+ * 统一配色方案见 ShadeUI。
  */
 public class JournalScreen extends Screen {
 
@@ -28,17 +28,9 @@ public class JournalScreen extends Screen {
     private boolean journalLoaded = false;
     private boolean bestiaryLoaded = false;
 
-    private int selectedTab = 0; // 0 = 日记, 1 = 图鉴
+    private int selectedTab = 0;
     private int selectedIndex = 0;
     private int scrollOffset = 0;
-
-    private static final int C_ACCENT = 0xFFA89BFF;
-    private static final int C_TEXT = 0xFFE8E8F0;
-    private static final int C_MUTED = 0xFF8888AA;
-    private static final int C_GOLD = 0xFFFFD700;
-    private static final int C_LOCKED = 0xFF3A3C6A;
-    private static final int C_GREEN = 0xFF50E3A0;
-    private static final int C_DIVIDER = 0xFF3A3C6A;
 
     public JournalScreen() {
         super(Component.literal(""));
@@ -87,9 +79,9 @@ public class JournalScreen extends Screen {
     // ==================== 日记标签页 ====================
 
     private void renderJournalTab(GuiGraphics g, int cx) {
-        g.drawString(font, "§l§6✦ 日记", cx - 20, 15, C_GOLD, false);
+        g.drawString(font, ShadeUI.titlePrefix("日记"), cx - 20, 15, ShadeUI.GOLD, false);
         if (!journalLoaded) {
-            g.drawString(font, "§7加载中...", cx - 20, height / 2, C_MUTED, false);
+            g.drawString(font, "§7加载中...", cx - 20, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
         int total = journalEntries.size();
@@ -97,7 +89,7 @@ public class JournalScreen extends Screen {
                 .filter(e -> journalUnlockedIds.contains(e.id())).count();
         g.drawString(font, "§7" + unlockedCount + "/" + total
                 + (total > 0 && unlockedCount == total ? " §a✦ 全部解锁!" : ""),
-                cx + 30, 19, C_MUTED, false);
+                cx + 30, 19, ShadeUI.TEXT_MUTED, false);
 
         int leftX = 20, rightX = cx + 80, detailX = rightX + 10, detailWidth = width - detailX - 20;
         int topY = 65, itemH = 22;
@@ -111,13 +103,13 @@ public class JournalScreen extends Screen {
             boolean isUnlocked = journalUnlockedIds.contains(entry.id());
             boolean isSelected = (i == selectedIndex);
             if (isSelected) g.fill(leftX, y, rightX, y + itemH, 0x44252545);
-            g.fill(leftX, y, leftX + 3, y + itemH, isUnlocked ? C_ACCENT : C_LOCKED);
+            g.fill(leftX, y, leftX + 3, y + itemH, isUnlocked ? ShadeUI.ACCENT : ShadeUI.BG_LOCKED);
             String marker = isUnlocked ? "§a✔" : "§7?";
-            g.drawString(font, marker + " §f" + entry.title(), leftX + 8, y + 3, isUnlocked ? C_TEXT : C_MUTED, false);
+            g.drawString(font, marker + " §f" + entry.title(), leftX + 8, y + 3, isUnlocked ? ShadeUI.TEXT_MAIN : ShadeUI.TEXT_MUTED, false);
         }
 
         if (displayList.isEmpty()) {
-            g.drawString(font, "§7暂无日记条目", cx - 40, height / 2, C_MUTED, false);
+            g.drawString(font, "§7暂无日记条目", cx - 40, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
 
@@ -126,20 +118,20 @@ public class JournalScreen extends Screen {
             boolean isUnlocked = journalUnlockedIds.contains(selEntry.id());
             g.fill(detailX, topY, detailX + detailWidth, height - 20, 0x33181A2E);
             if (!isUnlocked) {
-                g.drawString(font, "§7???", detailX + 10, topY + 10, C_MUTED, false);
+                g.drawString(font, "§7???", detailX + 10, topY + 10, ShadeUI.TEXT_MUTED, false);
             } else {
                 int dy = topY + 10;
-                g.drawString(font, "§l§6" + selEntry.title(), detailX + 10, dy, C_GOLD, false);
+                g.drawString(font, "§l§6" + selEntry.title(), detailX + 10, dy, ShadeUI.GOLD, false);
                 dy += 14;
-                g.drawString(font, "§7日记", detailX + 10, dy, C_MUTED, false);
+                g.drawString(font, "§7日记", detailX + 10, dy, ShadeUI.TEXT_MUTED, false);
                 dy += 14;
-                g.fill(detailX + 10, dy, detailX + detailWidth - 10, dy + 1, C_DIVIDER);
+                g.fill(detailX + 10, dy, detailX + detailWidth - 10, dy + 1, ShadeUI.DIVIDER);
                 dy += 6;
                 String desc = selEntry.description();
                 if (desc != null && !desc.isEmpty()) {
                     for (String line : wordWrap(desc, detailWidth - 20)) {
                         if (dy > height - 30) break;
-                        g.drawString(font, "§7" + line, detailX + 12, dy, C_MUTED, false);
+                        g.drawString(font, "§7" + line, detailX + 12, dy, ShadeUI.TEXT_MUTED, false);
                         dy += 10;
                     }
                 }
@@ -150,9 +142,9 @@ public class JournalScreen extends Screen {
     // ==================== 图鉴标签页 ====================
 
     private void renderBestiaryTab(GuiGraphics g, int cx) {
-        g.drawString(font, "§l§6✦ 图鉴", cx - 20, 15, C_GOLD, false);
+        g.drawString(font, "§l§6✦ 图鉴", cx - 20, 15, ShadeUI.GOLD, false);
         if (!bestiaryLoaded) {
-            g.drawString(font, "§7加载中...", cx - 20, height / 2, C_MUTED, false);
+            g.drawString(font, "§7加载中...", cx - 20, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
         int total = bestiaryEntries.size();
@@ -160,7 +152,7 @@ public class JournalScreen extends Screen {
                 .filter(e -> bestiaryDiscoveredIds.contains(e.id())).count();
         g.drawString(font, "§7已发现 " + discoveredCount + "/" + total
                 + (total > 0 && discoveredCount == total ? " §a✦ 全收集!" : ""),
-                cx + 30, 19, C_MUTED, false);
+                cx + 30, 19, ShadeUI.TEXT_MUTED, false);
 
         int leftX = 20, rightX = cx + 80, detailX = rightX + 10, detailWidth = width - detailX - 20;
         int topY = 65, itemH = 22;
@@ -174,13 +166,13 @@ public class JournalScreen extends Screen {
             boolean isDiscovered = bestiaryDiscoveredIds.contains(entry.id());
             boolean isSelected = (i == selectedIndex);
             if (isSelected) g.fill(leftX, y, rightX, y + itemH, 0x44252545);
-            g.fill(leftX, y, leftX + 3, y + itemH, isDiscovered ? C_GREEN : C_LOCKED);
+            g.fill(leftX, y, leftX + 3, y + itemH, isDiscovered ? ShadeUI.GREEN : ShadeUI.BG_LOCKED);
             String marker = isDiscovered ? "§a✔" : "§7?";
-            g.drawString(font, marker + " §f" + entry.title(), leftX + 8, y + 3, isDiscovered ? C_TEXT : C_MUTED, false);
+            g.drawString(font, marker + " §f" + entry.title(), leftX + 8, y + 3, isDiscovered ? ShadeUI.TEXT_MAIN : ShadeUI.TEXT_MUTED, false);
         }
 
         if (displayList.isEmpty()) {
-            g.drawString(font, "§7暂无图鉴条目", cx - 40, height / 2, C_MUTED, false);
+            g.drawString(font, "§7暂无图鉴条目", cx - 40, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
 
@@ -189,22 +181,22 @@ public class JournalScreen extends Screen {
             boolean isDiscovered = bestiaryDiscoveredIds.contains(selEntry.id());
             g.fill(detailX, topY, detailX + detailWidth, height - 20, 0x33181A2E);
             if (!isDiscovered) {
-                g.drawString(font, "§7???", detailX + 10, topY + 10, C_MUTED, false);
+                g.drawString(font, "§7???", detailX + 10, topY + 10, ShadeUI.TEXT_MUTED, false);
             } else {
                 int dy = topY + 10;
-                g.drawString(font, "§l§6" + selEntry.title(), detailX + 10, dy, C_GOLD, false);
+                g.drawString(font, "§l§6" + selEntry.title(), detailX + 10, dy, ShadeUI.GOLD, false);
                 dy += 14;
                 String cat = selEntry.category() != null && !selEntry.category().isEmpty()
                         ? " §7(" + selEntry.category() + ")" : "";
-                g.drawString(font, "§7图鉴" + cat, detailX + 10, dy, C_MUTED, false);
+                g.drawString(font, "§7图鉴" + cat, detailX + 10, dy, ShadeUI.TEXT_MUTED, false);
                 dy += 14;
-                g.fill(detailX + 10, dy, detailX + detailWidth - 10, dy + 1, C_DIVIDER);
+                g.fill(detailX + 10, dy, detailX + detailWidth - 10, dy + 1, ShadeUI.DIVIDER);
                 dy += 6;
                 String desc = selEntry.description();
                 if (desc != null && !desc.isEmpty()) {
                     for (String line : wordWrap(desc, detailWidth - 20)) {
                         if (dy > height - 30) break;
-                        g.drawString(font, "§7" + line, detailX + 12, dy, C_MUTED, false);
+                        g.drawString(font, "§7" + line, detailX + 12, dy, ShadeUI.TEXT_MUTED, false);
                         dy += 10;
                     }
                 }

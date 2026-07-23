@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -42,12 +43,12 @@ public class StoryDialogScreen extends Screen {
     private static final int OPTION_BUTTON_HEIGHT = 28;
     private static final int OPTION_BUTTON_SPACING = 4;
 
-    // 颜色常量
-    private static final int DIALOG_BG_COLOR = 0xDD1A1A2E;
-    private static final int TEXT_COLOR = 0xFFEEEEEE;
-    private static final int NARRATION_COLOR = 0xFFAAAAAA;
-    private static final int SPEAKER_COLOR = 0xFFFFD700;
-    private static final int CONTINUE_COLOR = 0x88AAAAAA;
+    // 颜色常量（来自 ShadeUI 统一配色）
+    private static final int DIALOG_BG_COLOR = ShadeUI.DLG_BG;
+    private static final int TEXT_COLOR = ShadeUI.DLG_TEXT;
+    private static final int NARRATION_COLOR = ShadeUI.DLG_NARR;
+    private static final int SPEAKER_COLOR = ShadeUI.GOLD;
+    private static final int CONTINUE_COLOR = ShadeUI.DLG_CONTINUE;
 
     private boolean typing = true;
     private static final Pattern QUOTE_PATTERN = Pattern.compile("「[^」]*」");

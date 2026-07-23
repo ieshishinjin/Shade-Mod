@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -12,10 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 触发器管理界面 — 查看和管理所有剧情触发器
+ * 触发器管理界面 — 左栏列表，右栏详情。
  *
- * 从剧情菜单中打开，替代 /story trigger list/remove 命令。
- * 左栏列出所有触发器，右栏显示详情，可删除选中触发器。
+ * 统一配色方案见 ShadeUI。
  */
 public class TriggerManageScreen extends Screen {
 
@@ -25,14 +25,6 @@ public class TriggerManageScreen extends Screen {
     private int selectedIndex = 0;
     private int scrollOffset = 0;
     private Button deleteButton;
-
-    private static final int C_ACCENT = 0xFFA89BFF;
-    private static final int C_TEXT = 0xFFE8E8F0;
-    private static final int C_MUTED = 0xFF8888AA;
-    private static final int C_GOLD = 0xFFFFD700;
-    private static final int C_LOCKED = 0xFF3A3C6A;
-    private static final int C_DIVIDER = 0xFF3A3C6A;
-    private static final int C_RED = 0xFFFF6B6B;
 
     public TriggerManageScreen() {
         super(Component.literal(""));
@@ -86,15 +78,15 @@ public class TriggerManageScreen extends Screen {
         super.render(g, mx, my, d);
 
         int cx = width / 2;
-        g.drawString(font, "§l§c✦ 触发器管理", cx - 38, 15, C_GOLD, false);
+        g.drawString(font, "§l§c✦ 触发器管理", cx - 38, 15, ShadeUI.GOLD, false);
 
         if (!loaded) {
-            g.drawString(font, "§7加载中...", cx - 20, height / 2, C_MUTED, false);
+            g.drawString(font, "§7加载中...", cx - 20, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
 
         if (triggers.isEmpty()) {
-            g.drawString(font, "§7没有已配置的触发器", cx - 55, height / 2, C_MUTED, false);
+            g.drawString(font, "§7没有已配置的触发器", cx - 55, height / 2, ShadeUI.TEXT_MUTED, false);
             return;
         }
 
@@ -108,7 +100,7 @@ public class TriggerManageScreen extends Screen {
 
         // 统计
         g.drawString(font, "§7共 " + triggers.size() + " 个触发器"
-                + (isOperator ? "" : " §c(仅 OP 可删除)"), cx + 30, 19, C_MUTED, false);
+                + (isOperator ? "" : " §c(仅 OP 可删除)"), cx + 30, 19, ShadeUI.TEXT_MUTED, false);
 
         // 左栏：滚动列表
         for (int i = scrollOffset; i < triggers.size(); i++) {
@@ -125,7 +117,7 @@ public class TriggerManageScreen extends Screen {
                 case "ZONE_ENTER" -> 0xFF50E3A0;
                 case "ITEM_PICKUP" -> 0xFFA89BFF;
                 case "NPC_INTERACT" -> 0xFFFFD700;
-                default -> C_LOCKED;
+                default -> ShadeUI.BG_LOCKED;
             };
             g.fill(leftX, y, leftX + 3, y + itemH, barColor);
 
@@ -140,8 +132,8 @@ public class TriggerManageScreen extends Screen {
             if (font.width(title) > listWidth - 50) {
                 title = font.plainSubstrByWidth(title, listWidth - 53) + "...";
             }
-            g.drawString(font, typeTag, leftX + 8, y + 3, C_TEXT, false);
-            g.drawString(font, "§f" + title, leftX + 8, y + 12, C_TEXT, false);
+            g.drawString(font, typeTag, leftX + 8, y + 3, ShadeUI.TEXT_MAIN, false);
+            g.drawString(font, "§f" + title, leftX + 8, y + 12, ShadeUI.TEXT_MAIN, false);
         }
 
         // 右栏：详情
@@ -149,7 +141,7 @@ public class TriggerManageScreen extends Screen {
             var t = triggers.get(selectedIndex);
             g.fill(detailX, topY, detailX + detailWidth, height - 45, 0x33181A2E);
 
-            g.drawString(font, "§l§6" + t.id(), detailX + 10, topY + 10, C_GOLD, false);
+            g.drawString(font, "§l§6" + t.id(), detailX + 10, topY + 10, ShadeUI.GOLD, false);
 
             String typeName = switch (t.type()) {
                 case "ZONE_ENTER" -> "§a区域触发";
@@ -158,31 +150,31 @@ public class TriggerManageScreen extends Screen {
                 default -> "§7未知";
             };
             g.drawString(font, typeName + (t.oneTime() ? " §7(一次性)" : " §7(可重复)"),
-                    detailX + 10, topY + 24, C_MUTED, false);
+                    detailX + 10, topY + 24, ShadeUI.TEXT_MUTED, false);
 
-            g.fill(detailX + 10, topY + 34, detailX + detailWidth - 10, topY + 35, C_DIVIDER);
+            g.fill(detailX + 10, topY + 34, detailX + detailWidth - 10, topY + 35, ShadeUI.DIVIDER);
 
             int dy = topY + 42;
 
             g.drawString(font, "§7绑定脚本: §f" + t.scriptId(),
-                    detailX + 12, dy, C_TEXT, false);
+                    detailX + 12, dy, ShadeUI.TEXT_MAIN, false);
             dy += 12;
 
             switch (t.type()) {
                 case "ZONE_ENTER" -> {
                     g.drawString(font, "§7区域: (§f" + t.x1() + "§7, §f" + t.z1()
                                     + "§7) → (§f" + t.x2() + "§7, §f" + t.z2() + "§7)",
-                            detailX + 12, dy, C_TEXT, false);
+                            detailX + 12, dy, ShadeUI.TEXT_MAIN, false);
                     dy += 12;
                     int sizeX = Math.abs(t.x2() - t.x1());
                     int sizeZ = Math.abs(t.z2() - t.z1());
                     g.drawString(font, "§7范围: §f" + sizeX + " §7× §f" + sizeZ + " §7格",
-                            detailX + 12, dy, C_MUTED, false);
+                            detailX + 12, dy, ShadeUI.TEXT_MUTED, false);
                 }
                 case "ITEM_PICKUP" -> g.drawString(font, "§7物品: §f" + t.targetId(),
-                        detailX + 12, dy, C_TEXT, false);
+                        detailX + 12, dy, ShadeUI.TEXT_MAIN, false);
                 case "NPC_INTERACT" -> g.drawString(font, "§7实体: §f" + t.targetId(),
-                        detailX + 12, dy, C_TEXT, false);
+                        detailX + 12, dy, ShadeUI.TEXT_MAIN, false);
             }
         }
     }

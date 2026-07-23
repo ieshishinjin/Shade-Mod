@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -10,20 +11,18 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * 任务日志界面 — 按 L 键打开
+ * 任务日志界面 — 按 L 键打开。
  *
- * 显示：
- * - 左侧：进行中任务列表
- * - 右侧：选中任务的详情（Objective 进度 + 描述）
- * - 底部：已完成任务历史
+ * 统一配色方案见 ShadeUI。
  */
 public class QuestLogScreen extends Screen {
 
-    private static final int BG_COLOR = 0xCC181A2E;
-    private static final int ACCENT_COLOR = 0xFFA89BFF;
-    private static final int TEXT_COLOR = 0xFFE8E8F0;
-    private static final int DIM_TEXT = 0xFF8888AA;
-    private static final int GREEN = 0xFF50E3A0;
+    // 旧常量改为 ShadeUI 引用，保留别名避免全量重写
+    private static final int BG_COLOR = ShadeUI.BG_PANEL;
+    private static final int ACCENT_COLOR = ShadeUI.ACCENT;
+    private static final int TEXT_COLOR = ShadeUI.TEXT_MAIN;
+    private static final int DIM_TEXT = ShadeUI.TEXT_MUTED;
+    private static final int GREEN = ShadeUI.GREEN;
 
     private List<StoryPayloads.QuestLogPayload.QuestLogEntry> activeQuests;
     private List<String> completedQuestIds;

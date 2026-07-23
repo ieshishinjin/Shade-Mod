@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -105,7 +106,7 @@ public class StoryMenuScreen extends Screen {
         int rx = cx + GAP / 2;
         int rw = LEFT_W;
 
-        g.drawString(font, "§l§6✦ 剧情选择", cx - 38, 16, 0xFFFFD700, false);
+        g.drawString(font, ShadeUI.titlePrefix("剧情选择"), cx - 38, 16, ShadeUI.GOLD, false);
 
         if (selectedIndex >= 0 && selectedIndex < scripts.size()) {
             var sel = scripts.get(selectedIndex);
@@ -116,7 +117,7 @@ public class StoryMenuScreen extends Screen {
             int startY = TOP + Math.max(0, (availH - listH) / 2);
 
             int dy = startY;
-            g.drawString(font, "§e" + sel.title(), rx, dy, 0xFFFFD700, false);
+            g.drawString(font, "§e" + sel.title(), rx, dy, ShadeUI.GOLD, false);
             dy += 18;
             g.drawString(font, sel.completed() ? "§a✦ 已完成" : (isActive ? "§b▶ 进行中" : "§7○ 未开始"), rx, dy, 0xFFAAAAAA, false);
             dy += 16;

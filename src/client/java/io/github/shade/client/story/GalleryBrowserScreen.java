@@ -1,5 +1,6 @@
 package io.github.shade.client.story;
 
+import io.github.shade.client.ShadeUI;
 import io.github.shade.story.network.StoryPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,10 +13,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 画廊浏览界面 — 展示所有 CG 和结局条目
+ * 画廊浏览界面 — CG 和结局条目。
  *
- * 替代 /story gallery 聊天命令，提供图形化浏览体验。
- * 条目分 CG 和 结局 两栏展示，已解锁/未解锁视觉区分。
+ * 统一配色方案见 ShadeUI。
  */
 public class GalleryBrowserScreen extends Screen {
 
@@ -23,14 +23,6 @@ public class GalleryBrowserScreen extends Screen {
     private Set<String> unlockedIds;
     private String selectedTab = "CG";
     private int scrollOffset = 0;
-
-    private static final int C_ACCENT = 0xFFA89BFF;
-    private static final int C_TEXT = 0xFFE8E8F0;
-    private static final int C_MUTED = 0xFF8888AA;
-    private static final int C_GOLD = 0xFFFFD700;
-    private static final int C_BG = 0xCC181A2E;
-    private static final int C_LOCKED = 0xFF3A3C6A;
-    private static final int C_GREEN = 0xFF50E3A0;
 
     public GalleryBrowserScreen(List<StoryPayloads.GalleryPayload.GalleryEntryData> entries, List<String> unlockedIds) {
         super(Component.literal(""));
@@ -64,14 +56,14 @@ public class GalleryBrowserScreen extends Screen {
 
         int cx = width / 2;
         int top = 70;
-        g.drawString(font, "§l§6✦ 画廊", cx - 30, 20, 0xFFFFD700, false);
+        g.drawString(font, ShadeUI.titlePrefix("画廊"), cx - 30, 20, ShadeUI.GOLD, false);
 
         var filtered = entries.stream()
                 .filter(e -> e.type().equals(selectedTab)).toList();
         boolean allUnlocked = filtered.stream().allMatch(e -> unlockedIds.contains(e.id()));
         int unlockedCount = (int) filtered.stream().filter(e -> unlockedIds.contains(e.id())).count();
         g.drawString(font, "§7" + unlockedCount + "/" + filtered.size()
-                + (allUnlocked && !filtered.isEmpty() ? " §a✦ 全收集!" : ""), cx + 40, 24, C_MUTED, false);
+                + (allUnlocked && !filtered.isEmpty() ? " §a✦ 全收集!" : ""), cx + 40, 24, ShadeUI.TEXT_MUTED, false);
 
         int y = top;
         int itemH = 40;
@@ -86,18 +78,18 @@ public class GalleryBrowserScreen extends Screen {
             int cellY = y;
 
             // 卡片背景
-            g.fill(cellX, cellY, cellX + cellW, cellY + itemH, unlocked ? 0xCC252645 : C_LOCKED);
+            g.fill(cellX, cellY, cellX + cellW, cellY + itemH, unlocked ? ShadeUI.BG_CARD : ShadeUI.BG_LOCKED);
 
             // 左侧色条
-            g.fill(cellX, cellY, cellX + 3, cellY + itemH, unlocked ? C_ACCENT : 0xFF555577);
+            g.fill(cellX, cellY, cellX + 3, cellY + itemH, unlocked ? ShadeUI.ACCENT : 0xFF555577);
 
             // 状态标记 + 标题
             String marker = unlocked ? "§a✔" : "§7?";
-            g.drawString(font, marker + " §f" + entry.title(), cellX + 8, cellY + 6, unlocked ? C_TEXT : C_MUTED, false);
+            g.drawString(font, marker + " §f" + entry.title(), cellX + 8, cellY + 6, unlocked ? ShadeUI.TEXT_MAIN : ShadeUI.TEXT_MUTED, false);
 
             // 类型标签 + 解锁状态
             String typeTag = entry.type().equals("CG") ? "§b[CG]" : "§d[结局]";
-            g.drawString(font, typeTag + (unlocked ? "" : " §7(未解锁)"), cellX + 8, cellY + 22, C_MUTED, false);
+            g.drawString(font, typeTag + (unlocked ? "" : " §7(未解锁)"), cellX + 8, cellY + 22, ShadeUI.TEXT_MUTED, false);
 
             col++;
             if (col >= maxPerRow) { col = 0; y += itemH + 4; }
@@ -105,7 +97,7 @@ public class GalleryBrowserScreen extends Screen {
 
         // 如果没条目
         if (filtered.isEmpty()) {
-            g.drawString(font, "§7暂无条目", cx - 20, height / 2, C_MUTED, false);
+            g.drawString(font, "§7暂无条目", cx - 20, height / 2, ShadeUI.TEXT_MUTED, false);
         }
     }
 
